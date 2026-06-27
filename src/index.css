@@ -1,0 +1,53 @@
+@import url('https://fonts.cdnfonts.com/css/cyber-brush');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Tema claro (default) ───────────────────────────────────────────────────── */
+:root {
+  --color-paper:       #f5f0e8;
+  --color-paper-dark:  #e8e0d0;
+  --color-ink:         #1a1a1a;
+  --color-gray-sketch: #8a8070;
+  --color-gray-light:  #c8c0b0;
+  --board-stripe:      #c8c0b0;
+}
+
+/* ── Tema escuro — inversão pura preto/branco ───────────────────────────────── */
+.dark {
+  --color-paper:       #111008;
+  --color-paper-dark:  #1a1810;
+  --color-ink:         #f5f0e8;
+  --color-gray-sketch: #a09080;
+  --color-gray-light:  #353020;
+  --board-stripe:      #1a1810; /* igual a paper-dark → riscas invisíveis */
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar       { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--color-paper-dark); }
+  ::-webkit-scrollbar-thumb { background: var(--color-gray-sketch); border-radius: 0; }
+}
