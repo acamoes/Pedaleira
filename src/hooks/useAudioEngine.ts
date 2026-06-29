@@ -13,7 +13,7 @@ export function useAudioEngine() {
     setIsPlaying(true)
     if (timerRef.current) window.clearTimeout(timerRef.current)
     // mantém o estado "a tocar" enquanto o som decai
-    timerRef.current = window.setTimeout(() => setIsPlaying(false), Math.min(duration, 2.6) * 1000)
+    timerRef.current = window.setTimeout(() => setIsPlaying(false), Math.min(duration, 3.2) * 1000)
   }, [])
 
   useEffect(() => () => { if (timerRef.current) window.clearTimeout(timerRef.current) }, [])

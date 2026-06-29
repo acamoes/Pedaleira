@@ -17,16 +17,17 @@ export function buildTunePrompt(pedals: Pedal[], song: string, artist: string): 
 
   const artistPart = artist.trim() ? ` dos/de "${artist.trim()}"` : ''
 
-  return `Estes são os ÚNICOS pedais de guitarra que tenho disponíveis:
+  return `Tenho em casa este INVENTÁRIO de pedais de guitarra:
 ${list}
 
-Quero aproximar-me o mais possível do som da guitarra na música "${song.trim()}"${artistPart}, usando APENAS os pedais acima (não posso adicionar outros).
+Quero aproximar-me o mais possível do som da guitarra na música "${song.trim()}"${artistPart}.
 
-Com base nesses pedais, diz-me:
-1. A ORDEM em que devo ligá-los na cadeia (ex.: Guitarra -> Pedal A -> Pedal B -> Amplificador). Escolhe quais usar e indica se algum deve ficar em bypass.
-2. A CONFIGURAÇÃO de cada pedal usado, numa tabela, uma linha por pedal, com os valores de cada knob (0-10) na ordem em que listei os knobs acima.
+A partir do inventário acima (não posso adicionar outros pedais):
+1. ESCOLHE apenas os pedais RELEVANTES para esta música — ignora os que não fazem sentido (não tens de usar todos).
+2. Indica a ORDEM da cadeia com os escolhidos (ex.: Guitarra -> Pedal A -> Pedal B -> Amplificador).
+3. Dá a CONFIGURAÇÃO de cada pedal escolhido numa tabela, uma linha por pedal, com os valores de cada knob (0-10) na ordem em que os listei.
 
-Procura a combinação mais parecida possível com o tom original, mesmo que aproximada.`
+Procura a combinação mais parecida possível com o tom original, mesmo que aproximada. Os pedais que não escolheres ficam de fora (em casa). Quero que me dês uma resposta seguindo exatamente este formato e mais nada: Pedal X1 - Configuração Y1, Pedal X2, Configuração Y2, etc...`
 }
 
 // ─── B) Interpretar a resposta colada ────────────────────────────────────────
@@ -43,7 +44,10 @@ function escapeRegex(s: string): string {
 }
 
 const TYPE_WORDS = /\b(overdrive|distortion|distor|fuzz|delay|reverb|chorus|flanger|phaser|tremolo|compressor|comp|octaver|octave|wah|eq|boost|looper|loop|tuner)\b/gi
-const BYPASS_RE = /(bypass|desligad|deslig|\boff\b|n[aã]o\s+(usar|ligad|utiliz)|sem\s+uso|disabled)/i
+// Bypass do PEDAL (não confundir com valores de switches como "Voice off").
+// Só frases inequívocas a nível de pedal; "off"/"desligado" sozinhos são evitados
+// porque colidem com estados de switch.
+const BYPASS_RE = /(\bbypass\b|em\s+bypass|fora\s+da\s+(cadeia|chain)|n[aã]o\s+(usar|utiliz|entra)|sem\s+uso|em\s+casa|\bignorad|\bexclu|\bdisabled\b)/i
 
 /** Candidatos de pesquisa para localizar um pedal (do mais específico ao menos). */
 function pedalCandidates(p: Pedal): string[] {

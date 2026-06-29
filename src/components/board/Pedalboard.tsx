@@ -23,7 +23,7 @@ const AMP_H         = 190
 const AMP_MARGIN    = 8
 
 export function Pedalboard() {
-  const { currentSetup, movePedal, setAllEnabled } = usePedalboardStore()
+  const { currentSetup, movePedal, setAllEnabled, togglePedalEnabled } = usePedalboardStore()
   const { play, isPlaying, analyser } = useAudioEngine()
   const [showAddModal,  setShowAddModal]  = useState(false)
   const [editingPedal,  setEditingPedal]  = useState<Pedal | null>(null)
@@ -91,8 +91,6 @@ export function Pedalboard() {
 
   const ampTop = Math.round((CANVAS_H - AMP_H) / 2)
 
-  const allOn = currentSetup.pedals.length > 0 && currentSetup.pedals.every((p) => p.enabled)
-
   return (
     <div className="flex flex-col gap-3 flex-1 overflow-hidden">
       {/* Barra superior */}
@@ -118,17 +116,54 @@ export function Pedalboard() {
 
         <div className="flex items-center gap-2 flex-wrap">
           <SketchButton size="sm" variant="ghost"
-            disabled={currentSetup.pedals.length === 0}
-            onClick={() => setAllEnabled(!allOn)}>
-            {allOn ? 'Desligar todos' : 'Ligar todos'}
+            disabled={chainPedals.length === 0}
+            onClick={() => setAllEnabled(false)}>
+            Limpar chain
           </SketchButton>
           <SketchButton size="sm" variant="ghost"
             disabled={chainPedals.length === 0}
             onClick={() => exportChainPng(chainPedals, currentSetup.name)}>
             Exportar PNG
           </SketchButton>
+        </div>
+      </div>
+
+      {/* INVENTÁRIO — os pedais que tenho em casa.
+          Clica num pedal para o pôr na chain (ou tirar). */}
+      <div className="border-2 border-ink bg-paper p-2 flex flex-col gap-1.5 shadow-sketch-sm">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-sketch text-base font-bold text-ink">
+            Os meus pedais em casa ({currentSetup.pedals.length})
+          </span>
           <SketchButton size="sm" onClick={() => setShowAddModal(true)}>+ Pedal</SketchButton>
         </div>
+
+        {currentSetup.pedals.length === 0 ? (
+          <span className="font-body text-xs text-gray-sketch italic">
+            Adiciona os pedais que tens em casa para a app os poder usar.
+          </span>
+        ) : (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {currentSetup.pedals.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => togglePedalEnabled(p.id)}
+                title={p.enabled ? 'Na chain — clica para tirar' : 'Em casa — clica para pôr na chain'}
+                className={`flex items-center gap-1.5 border-2 px-2 py-0.5 font-body text-[11px] transition-all
+                  ${p.enabled ? 'border-ink text-ink' : 'border-gray-light text-gray-sketch hover:border-ink'}`}
+                style={{ backgroundColor: p.enabled ? 'var(--color-paper-dark)' : 'transparent' }}
+              >
+                <span
+                  className="inline-block w-2 h-2 rounded-full border border-ink"
+                  style={{ backgroundColor: p.enabled ? '#2fae4f' : 'transparent' }}
+                />
+                {p.model || p.modelName}
+                <span className="text-[8px] opacity-60 uppercase">{p.enabled ? 'chain' : 'casa'}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Canvas principal */}
@@ -166,18 +201,22 @@ export function Pedalboard() {
           <Amplifier />
         </div>
 
-        {/* Mensagem de board vazia */}
-        {currentSetup.pedals.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        {/* Mensagem de chain vazia */}
+        {chainPedals.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-24">
             <div className="text-center">
-              <p className="font-sketch text-2xl text-gray-sketch">A tua pedaleira está vazia</p>
-              <p className="font-body text-xs text-gray-sketch mt-1">Clica «+ Pedal» para começar</p>
+              <p className="font-sketch text-2xl text-gray-sketch">Sem chain montada</p>
+              <p className="font-body text-xs text-gray-sketch mt-1">
+                {currentSetup.pedals.length === 0
+                  ? 'Adiciona os pedais que tens ao teu inventário'
+                  : 'Escolhe uma música para montar a chain, ou liga pedais do inventário abaixo'}
+              </p>
             </div>
           </div>
         )}
 
-        {/* Pedais — posicionamento livre */}
-        {currentSetup.pedals.map((pedal) => (
+        {/* Pedais — APENAS os que estão na chain (board = chain da música atual) */}
+        {chainPedals.map((pedal) => (
           <div
             key={pedal.id}
             className="absolute"

@@ -241,13 +241,26 @@ export const usePedalboardStore = create<Store>((set, get) => {
     },
 
     togglePedalEnabled(pedalId) {
-      set((s) => ({
-        currentSetup: {
-          ...s.currentSetup,
-          pedals: s.currentSetup.pedals.map((p) => p.id === pedalId ? { ...p, enabled: !p.enabled } : p),
-          updatedAt: Date.now(),
-        },
-      }))
+      set((s) => {
+        const pedals = s.currentSetup.pedals
+        const target = pedals.find((p) => p.id === pedalId)
+        const turningOn = target ? !target.enabled : false
+        // ao entrar na chain, coloca-o no fim (à direita do último pedal ligado)
+        const rowY = Math.floor((CANVAS_H - PEDAL_H) / 2)
+        const enabledXs = pedals.filter((p) => p.enabled && p.id !== pedalId).map((p) => p.x)
+        const nextX = enabledXs.length ? Math.max(...enabledXs) + PEDAL_W + 36 : 110
+        return {
+          currentSetup: {
+            ...s.currentSetup,
+            pedals: pedals.map((p) =>
+              p.id === pedalId
+                ? { ...p, enabled: !p.enabled, ...(turningOn ? { x: nextX, y: rowY } : {}) }
+                : p,
+            ),
+            updatedAt: Date.now(),
+          },
+        }
+      })
       persist()
     },
 

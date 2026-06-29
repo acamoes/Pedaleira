@@ -51,7 +51,7 @@ export function getAnalyser(): AnalyserNode | null {
 
 const pluckCache = new Map<number, AudioBuffer>()
 
-function makePluck(frequency: number, duration = 2.4): AudioBuffer {
+function makePluck(frequency: number, duration = 3.4): AudioBuffer {
   const c = getCtx()
   const key = Math.round(frequency)
   const cached = pluckCache.get(key)
@@ -62,7 +62,7 @@ function makePluck(frequency: number, duration = 2.4): AudioBuffer {
   const buf = c.createBuffer(1, n, sr)
   const data = buf.getChannelData(0)
   const N = Math.max(2, Math.round(sr / frequency))
-  const decay = 0.9965
+  const decay = 0.9978   // mais sustain — deixa a modulação respirar
 
   // excitação: ruído no primeiro período
   for (let i = 0; i < N; i++) data[i] = Math.random() * 2 - 1
@@ -185,23 +185,30 @@ function buildReverb(c: AudioContext, p: Pedal): FxNode {
 }
 
 function buildModulation(c: AudioContext, p: Pedal): FxNode {
-  // chorus / flanger
-  const rate = 0.1 + norm(knob(p, ['rate', 'speed'], 5)) * 5
-  const depthMs = (p.type === 'flanger' ? 2 : 4) * (0.3 + norm(knob(p, ['depth'], 5)))
-  const baseMs = p.type === 'flanger' ? 4 : 22
-  const mix = norm(knob(p, ['mix', 'd-v', 'level'], 5)) || 0.5
+  // chorus / flanger — modulação mais profunda e audível
+  const rate = 0.2 + norm(knob(p, ['rate', 'speed'], 5)) * 4
+  // profundidade (swing do delay) bem maior: chorus ~3..11ms, flanger ~1..5ms
+  const depthMs = (p.type === 'flanger' ? 2.5 : 5.5) * (0.4 + norm(knob(p, ['depth'], 6)))
+  const baseMs = p.type === 'flanger' ? 5 : 18
+  // mix forte por defeito para o efeito "respirar"; Level/Mix ajustam
+  const mix = 0.55 + norm(knob(p, ['mix', 'd-v', 'level'], 5)) * 0.45
 
   const input = c.createGain()
   const out = c.createGain()
   const delay = c.createDelay(0.1)
   delay.delayTime.value = baseMs / 1000
-  const lfo = c.createOscillator(); lfo.frequency.value = rate
+  const lfo = c.createOscillator()
+  lfo.type = 'triangle'   // varrimento mais suave que a sinusóide
+  lfo.frequency.value = rate
   const lfoGain = c.createGain(); lfoGain.gain.value = depthMs / 1000
   const wet = c.createGain(); wet.gain.value = mix
+  // realimentação ligeira → engrossa o flanger/chorus
+  const fb = c.createGain(); fb.gain.value = p.type === 'flanger' ? 0.35 : 0.15
 
   lfo.connect(lfoGain); lfoGain.connect(delay.delayTime)
-  input.connect(out)
+  input.connect(out)                      // dry
   input.connect(delay); delay.connect(wet); wet.connect(out)
+  delay.connect(fb); fb.connect(delay)    // feedback
   return { input, output: out, oscs: [lfo] }
 }
 
@@ -356,7 +363,7 @@ export function playStrum(pedals: Pedal[]): PlayHandle {
   })
 
   // arranca os LFOs e agenda paragem
-  const duration = 3.0
+  const duration = 3.6
   chain.oscs.forEach((o) => { o.start(now); o.stop(now + duration) })
   runningOscs = chain.oscs
 
