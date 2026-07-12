@@ -21,19 +21,30 @@ function getCtx(): AudioContext {
   if (!ctx) {
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     ctx = new AC()
-    // saída final: leve "speaker" (low-pass) + master + analyser
+    // ── Saída ("amplificador"): cadeia de tom quente para tirar a estridência ──
+    // 1) highpass leve para limpar rumble
+    const hp = ctx.createBiquadFilter()
+    hp.type = 'highpass'
+    hp.frequency.value = 90
+    // 2) speaker low-pass mais fechado (corta os agudos ásperos)
     const speaker = ctx.createBiquadFilter()
     speaker.type = 'lowpass'
-    speaker.frequency.value = 6500
+    speaker.frequency.value = 3200
+    speaker.Q.value = 0.5
+    // 3) high-shelf negativo a suavizar ainda mais o topo
+    const tilt = ctx.createBiquadFilter()
+    tilt.type = 'highshelf'
+    tilt.frequency.value = 2600
+    tilt.gain.value = -6
     masterOut = ctx.createGain()
-    masterOut.gain.value = 0.55
+    masterOut.gain.value = 0.5
     analyser = ctx.createAnalyser()
     analyser.fftSize = 2048
-    speaker.connect(masterOut)
+    hp.connect(speaker); speaker.connect(tilt); tilt.connect(masterOut)
     masterOut.connect(analyser)
     analyser.connect(ctx.destination)
-    // guardamos o "speaker" como ponto de entrada da saída
-    ;(getCtx as unknown as { _speaker?: AudioNode })._speaker = speaker
+    // o ponto de entrada da saída é o highpass
+    ;(getCtx as unknown as { _speaker?: AudioNode })._speaker = hp
   }
   return ctx
 }
@@ -62,17 +73,37 @@ function makePluck(frequency: number, duration = 3.4): AudioBuffer {
   const buf = c.createBuffer(1, n, sr)
   const data = buf.getChannelData(0)
   const N = Math.max(2, Math.round(sr / frequency))
-  const decay = 0.9978   // mais sustain — deixa a modulação respirar
+  const decay = 0.9975   // sustain
 
-  // excitação: ruído no primeiro período
-  for (let i = 0; i < N; i++) data[i] = Math.random() * 2 - 1
-  // recorrência KS
+  // excitação: ruído SUAVIZADO (pré-low-pass) → menos brilho/estridência inicial
+  const exc = new Float32Array(N)
+  let s = 0
+  for (let i = 0; i < N; i++) {
+    const white = Math.random() * 2 - 1
+    s += 0.18 * (white - s)   // one-pole low-pass do ruído
+    exc[i] = s
+  }
+  // normaliza a excitação
+  let peak = 0
+  for (let i = 0; i < N; i++) peak = Math.max(peak, Math.abs(exc[i]))
+  if (peak > 0) for (let i = 0; i < N; i++) exc[i] /= peak
+  for (let i = 0; i < N; i++) data[i] = exc[i]
+
+  // recorrência KS com amortecimento extra (one-pole) → tom mais quente/mellow
+  let lp = 0
+  const damp = 0.5   // 0 = muito brilhante, 1 = muito abafado
   for (let i = N; i < n; i++) {
     const j = i - N
-    data[i] = decay * 0.5 * (data[j] + data[j > 0 ? j - 1 : 0])
+    const avg = 0.5 * (data[j] + data[j > 0 ? j - 1 : 0])
+    lp += damp * (avg - lp)        // suaviza os agudos a cada volta
+    data[i] = decay * lp
   }
+
+  // ataque suave (remove o transiente abrupto que soa "estridente")
+  const atk = Math.floor(sr * 0.006)
+  for (let i = 0; i < atk; i++) data[i] *= i / atk
   // fade-out final para evitar clique
-  const fade = Math.floor(sr * 0.15)
+  const fade = Math.floor(sr * 0.18)
   for (let i = 0; i < fade; i++) data[n - 1 - i] *= i / fade
 
   pluckCache.set(key, buf)
