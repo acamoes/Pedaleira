@@ -1,5 +1,4 @@
 import { useCallback } from 'react'
-import { usePedalboardStore } from '../store/usePedalboardStore'
 import { findSeedPedal } from '../constants/seedPedals'
 import type { IdentifyPedalResponse } from '../types'
 
@@ -20,26 +19,22 @@ function genericPedal(modelName: string): IdentifyPedalResponse {
   }
 }
 
+export type ResolveResult =
+  | { data: IdentifyPedalResponse; recognized: boolean }
+  | { error: string }
+
 export function useIdentifyPedal() {
-  const { addPedal } = usePedalboardStore()
+  // Resolve o pedal (seed reconhecido ou genérico) SEM o adicionar à board.
+  // Quem chama fica livre para intercalar um passo de cor antes de gravar.
+  const resolvePedal = useCallback((modelName: string): ResolveResult => {
+    const trimmed = modelName.trim()
+    if (!trimmed) return { error: 'Escreve o nome do pedal.' }
 
-  const identify = useCallback(
-    async (modelName: string): Promise<{ error?: string; recognized?: boolean }> => {
-      const trimmed = modelName.trim()
-      if (!trimmed) return { error: 'Escreve o nome do pedal.' }
+    const seed = findSeedPedal(trimmed)
+    if (seed) return { data: seed, recognized: true }
 
-      const seed = findSeedPedal(trimmed)
-      if (seed) {
-        addPedal(trimmed, seed)
-        return { recognized: true }
-      }
+    return { data: genericPedal(trimmed), recognized: false }
+  }, [])
 
-      // Fallback local: cria um pedal genérico editável
-      addPedal(trimmed, genericPedal(trimmed))
-      return { recognized: false }
-    },
-    [addPedal],
-  )
-
-  return { identify }
+  return { resolvePedal }
 }

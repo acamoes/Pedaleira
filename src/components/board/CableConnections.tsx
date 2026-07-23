@@ -1,64 +1,75 @@
-import type { Pedal } from '../../types'
+import type { Pedal, Connection } from '../../types'
 import { PEDAL_W, PEDAL_H } from '../../store/usePedalboardStore'
+import { GUITAR_JACK, AMP_JACK, jackPedalId } from '../../utils/chain'
 
 interface Pt { x: number; y: number }
 
 interface Props {
+  pedals: Pedal[]                 // TODOS os pedais na board (para coordenadas)
+  connections: Connection[]
   guitarJack: Pt
   ampJack: Pt
-  pedals: Pedal[]   // já ordenados por x (signal chain)
+  live?: { from: Pt; to: Pt } | null   // cabo a ser arrastado
+  onDisconnect?: (from: string, to: string) => void
 }
 
-function cable(from: Pt, to: Pt): string {
-  const dx = Math.abs(to.x - from.x) * 0.55
-  return `M ${from.x} ${from.y} C ${from.x + dx} ${from.y} ${to.x - dx} ${to.y} ${to.x} ${to.y}`
+function cablePath(from: Pt, to: Pt): string {
+  const dx = Math.max(28, Math.abs(to.x - from.x) * 0.5)
+  const sag = 20   // barriga do cabo (gravidade)
+  return `M ${from.x} ${from.y} C ${from.x + dx} ${from.y + sag} ${to.x - dx} ${to.y + sag} ${to.x} ${to.y}`
 }
 
-export function CableConnections({ guitarJack, ampJack, pedals }: Props) {
-  const paths: string[] = []
+export function CableConnections({ pedals, connections, guitarJack, ampJack, live, onDisconnect }: Props) {
+  const byId = new Map(pedals.map((p) => [p.id, p]))
 
-  if (pedals.length === 0) {
-    paths.push(cable(guitarJack, ampJack))
-  } else {
-    const first = pedals[0]
-    const last  = pedals[pedals.length - 1]
-
-    // guitarra → primeiro pedal (input = left center)
-    paths.push(cable(guitarJack, { x: first.x, y: first.y + PEDAL_H / 2 }))
-
-    // pedal → pedal
-    for (let i = 0; i < pedals.length - 1; i++) {
-      const from = { x: pedals[i].x + PEDAL_W, y: pedals[i].y + PEDAL_H / 2 }
-      const to   = { x: pedals[i + 1].x,        y: pedals[i + 1].y + PEDAL_H / 2 }
-      paths.push(cable(from, to))
-    }
-
-    // último pedal → amp
-    paths.push(cable({ x: last.x + PEDAL_W, y: last.y + PEDAL_H / 2 }, ampJack))
+  function coord(jack: string): Pt | null {
+    if (jack === GUITAR_JACK) return guitarJack
+    if (jack === AMP_JACK) return ampJack
+    const pid = jackPedalId(jack)
+    if (!pid) return null
+    const p = byId.get(pid)
+    if (!p) return null
+    const y = p.y + PEDAL_H / 2
+    return jack.endsWith(':out') ? { x: p.x + PEDAL_W, y } : { x: p.x, y }
   }
 
   return (
     <>
-      {paths.map((d, i) => (
+      {connections.map((c, i) => {
+        const a = coord(c.from)
+        const b = coord(c.to)
+        if (!a || !b) return null
+        const d = cablePath(a, b)
+        return (
+          <g key={`${c.from}->${c.to}-${i}`} className="group">
+            {/* cabo visível (fica vermelho ao passar o rato → vai desligar) */}
+            <path
+              d={d} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
+              opacity="0.82" className="group-hover:stroke-accent" style={{ pointerEvents: 'none' }}
+            />
+            {/* área clicável larga para desligar */}
+            <path
+              d={d} fill="none" stroke="transparent" strokeWidth="14" strokeLinecap="round"
+              style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+              onClick={() => onDisconnect?.(c.from, c.to)}
+            >
+              <title>Clica para desligar o cabo</title>
+            </path>
+            {/* fichas de latão nas pontas */}
+            <circle cx={a.x} cy={a.y} r="4" fill="var(--color-brass)" stroke="var(--color-ink)" strokeWidth="1" style={{ pointerEvents: 'none' }} />
+            <circle cx={b.x} cy={b.y} r="4" fill="var(--color-brass)" stroke="var(--color-ink)" strokeWidth="1" style={{ pointerEvents: 'none' }} />
+          </g>
+        )
+      })}
+
+      {/* cabo em arrasto (tracejado, cor de acento) */}
+      {live && (
         <path
-          key={i}
-          d={d}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-          opacity="0.75"
-          // tracejado subtil para imitar textura de cabo
-          strokeDasharray="0"
+          d={cablePath(live.from, live.to)} fill="none" stroke="var(--color-accent)"
+          strokeWidth="3" strokeLinecap="round" strokeDasharray="7 5" opacity="0.9"
+          style={{ pointerEvents: 'none' }}
         />
-      ))}
-      {/* Pequenos pontos de conexão nas junções */}
-      {pedals.map((p) => (
-        <g key={p.id}>
-          <circle cx={p.x}          cy={p.y + PEDAL_H / 2} r="4" fill="currentColor" opacity="0.6" />
-          <circle cx={p.x + PEDAL_W} cy={p.y + PEDAL_H / 2} r="4" fill="currentColor" opacity="0.6" />
-        </g>
-      ))}
+      )}
     </>
   )
 }

@@ -30,15 +30,15 @@ export function TuneResult() {
           const switchEntries = Object.entries(s.switches ?? {})
 
           return (
-            <div key={s.pedalId} className="border border-gray-light p-2">
+            <div key={s.pedalId} className="border border-gray-light rounded-[4px] p-2">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-sketch text-xs font-bold text-ink">
+                <span className="font-body text-[13px] font-bold text-ink">
                   {pedal.model}
                 </span>
                 <span
-                  className={`font-body text-[10px] px-1 border ${
+                  className={`font-mono text-[9px] tracking-wide px-1.5 py-px border rounded-[3px] ${
                     s.enabled
-                      ? 'border-ink text-ink'
+                      ? 'border-live text-live'
                       : 'border-gray-light text-gray-sketch'
                   }`}
                 >

@@ -61,6 +61,16 @@ export function TuneForm() {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Guia de 2 passos */}
+      <div className="flex gap-2">
+        {[['1', 'Gera', 'a pergunta e copia'], ['2', 'Cola', 'a resposta e aplica']].map(([n, verb, rest]) => (
+          <div key={n} className="flex-1 flex items-start gap-2 border-2 border-ink rounded-hand bg-paper-dark px-2.5 py-2">
+            <span className="flex-none w-5 h-5 rounded-full bg-accent text-paper font-mono text-[11px] font-bold grid place-items-center">{n}</span>
+            <span className="text-[11.5px] leading-tight text-ink"><b className="block">{verb}</b>{rest}</span>
+          </div>
+        ))}
+      </div>
+
       <SketchInput id="song-name" label="Música" placeholder="ex.: Suck My Kiss"
         value={song} onChange={(e) => { setSong(e.target.value); clearTuneResult() }} />
       <SketchInput id="artist-name" label="Artista (opcional)" placeholder="ex.: Red Hot Chili Peppers"
@@ -81,7 +91,7 @@ export function TuneForm() {
                 type="button"
                 title={`Reaplicar: ${h.song}${h.artist ? ' — ' + h.artist : ''}`}
                 onClick={() => { setSong(h.song); setArtist(h.artist); loadFromHistory(h); setStatus(`Reaplicado: ${h.song}`) }}
-                className="font-body text-[10px] border border-ink px-1.5 py-0.5 text-ink hover:bg-paper-dark"
+                className="font-body text-[11px] border-[1.5px] border-gray-light rounded-hand px-2 py-0.5 text-ink hover:border-ink hover:bg-paper-dark transition-colors"
               >
                 {h.song}
               </button>
@@ -101,9 +111,9 @@ export function TuneForm() {
 
       {prompt && (
         <div className="flex flex-col gap-1">
-          <label className="font-sketch text-sm text-ink leading-none">Pergunta (copia para o teu LLM)</label>
+          <label className="font-body text-[13px] font-semibold text-ink leading-none">Pergunta (copia para o teu LLM)</label>
           <textarea readOnly value={prompt} rows={7}
-            className="bg-paper border-2 border-ink px-2 py-1.5 font-body text-[11px] text-ink shadow-sketch-sm focus:outline-none resize-none leading-snug" />
+            className="bg-paper border-2 border-ink rounded-[4px] px-2.5 py-2 font-mono text-[11.5px] text-ink shadow-sketch-sm focus:outline-none resize-none leading-snug" />
           <SketchButton type="button" size="sm" variant="ghost" onClick={handleCopy} className="self-start">
             {copied ? '✓ Copiado' : 'Copiar pergunta'}
           </SketchButton>
@@ -112,10 +122,10 @@ export function TuneForm() {
 
       {/* PASSO 2 */}
       <div className="flex flex-col gap-1">
-        <label className="font-sketch text-sm text-ink leading-none">Resposta (cola aqui)</label>
+        <label className="font-body text-[13px] font-semibold text-ink leading-none">Resposta (cola aqui)</label>
         <textarea value={answer} onChange={(e) => { setAnswer(e.target.value); setPreview(null) }} rows={6}
           placeholder="Cola a resposta do LLM (ordem + tabela, ou JSON)..."
-          className="bg-paper border-2 border-ink px-2 py-1.5 font-body text-[11px] text-ink placeholder:text-gray-sketch shadow-sketch-sm focus:outline-none resize-none leading-snug" />
+          className="bg-paper border-2 border-ink rounded-[4px] px-2.5 py-2 font-mono text-[11.5px] text-ink placeholder:text-gray-sketch shadow-sketch-sm focus:outline-none resize-none leading-snug" />
       </div>
 
       <SketchButton type="button" onClick={handlePreview} disabled={!answer.trim() || noPedals} className="w-full justify-center">
@@ -124,8 +134,8 @@ export function TuneForm() {
 
       {/* Pré-visualização antes de aplicar */}
       {preview && (
-        <div className="border-2 border-ink bg-paper-dark p-2 flex flex-col gap-1.5">
-          <p className="font-sketch text-sm font-bold text-ink">Vou aplicar isto:</p>
+        <div className="border-2 border-ink rounded-[6px] bg-paper-dark p-2.5 flex flex-col gap-1.5 shadow-sketch-sm">
+          <p className="font-body text-[13px] font-bold text-accent">Vou aplicar isto:</p>
           <p className="font-body text-[11px] text-ink">
             <strong>Ordem:</strong> Guitarra → {preview.orderedIds.map((id) => pedalById(id)?.model ?? '?').join(' → ')} → Amp
           </p>

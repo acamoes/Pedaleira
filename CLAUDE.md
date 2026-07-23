@@ -34,12 +34,28 @@ old persisted data and a one-time `BYPASS_MIGRATION_KEY` flag forces all pedals 
 Canvas geometry constants (`CANVAS_H`, `PEDAL_W`, `PEDAL_H`) are exported from this store and
 shared by the board.
 
-### The signal chain is derived from x-position, not array order
-Pedals are positioned freely on a canvas (`Pedal.x`, `Pedal.y`). The **active chain = pedals
-with `enabled === true`, sorted by `x`**. New pedals start `enabled: false` ("não ligado" — no
-cable, in bypass). This invariant is recomputed everywhere the chain is needed
-(`Pedalboard.tsx`, `Sidebar.tsx`, `useAudioEngine` callers). `applyParsedTune` repositions the
-chosen pedals' `x` to lay them out left-to-right in the requested order.
+### The signal chain is wired manually with patch cables
+Pedals are positioned freely on a canvas (`Pedal.x`, `Pedal.y`) and **all owned pedals live on
+the board** (there is no separate inventory). The chain is **not** derived from position — it is
+an explicit graph of `Connection[]` (stored on `PedalboardSetup.connections`). A connection is a
+cable `{ from, to }` between jacks identified by string: `'guitar'` (output), `'amp'` (input),
+`'<pedalId>:out'`, `'<pedalId>:in'`. Invariant: **at most one cable per output jack and per
+input jack** (enforced in `connectJacks`).
+
+`src/utils/chain.ts` is the single source of truth: **`deriveChain(pedals, connections)`** walks
+from `'guitar'` following out→in links (with a visited-set guard) until `'amp'` or a dead end,
+returning the ordered pedals — the chain order is the *wiring* order. Everything that needs the
+chain calls `deriveChain` (`Pedalboard.tsx`, `Sidebar.tsx`, and `play()`/`ChainWaveform`).
+`connectedIds` derives the "in chain" set. New pedals start with no cables (disconnected).
+`Pedal.enabled` is retained but is now just a **mirror of "is in the derived chain"**, kept in
+sync by `syncEnabledPedals` after every connection mutation (source of truth = `connections`).
+
+Interaction lives in `Pedalboard.tsx`: draggable jack handles (`data-jack`/`data-kind`) start a
+cable via Pointer Events; drop onto another jack calls `connectJacks`; clicking a cable in
+`CableConnections.tsx` calls `disconnectCable`; the card footswitch calls `disconnectPedal`.
+`applyParsedTune` builds the `connections` for the chosen order (guitar→…→amp) and repositions
+`x` only cosmetically. `withMigratedConnections` (run in `hydrateSetup` on load/import) rebuilds
+cables from the legacy `enabled`+`x` model for setups saved before this feature.
 
 ### Two parallel systems both keyed off `EffectType`
 1. `src/utils/signal.ts` — pure-math DSP for **visualization only** (`applyEffect`,

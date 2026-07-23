@@ -6,7 +6,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const base =
-  'font-body font-semibold border-2 border-ink transition-all duration-100 active:translate-y-px active:shadow-none select-none'
+  'font-body font-semibold border-2 border-ink rounded-hand transition-all duration-100 active:translate-y-px active:shadow-none select-none'
 
 const variants = {
   // hover:brightness-90 funciona tanto em claro (botão escuro) como em escuro (botão claro)

@@ -58,19 +58,19 @@ export function KnobControl({ knob, onChange, disabled = false, textColor, info,
       <svg
         width="34" height="34" viewBox="0 0 36 36"
         className={`cursor-ns-resize transition-all ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-        style={highlighted ? { filter: 'drop-shadow(0 0 3px #e0492c)' } : undefined}
+        style={highlighted ? { filter: 'drop-shadow(0 0 3px var(--color-accent))' } : undefined}
         onMouseDown={handleMouseDown}
       >
         <circle cx="18" cy="18" r="14" fill="none"
-          stroke={highlighted ? '#e0492c' : stroke} strokeWidth="1.8" strokeDasharray="2 1" />
+          stroke={highlighted ? 'var(--color-accent)' : stroke} strokeWidth="1.8" strokeDasharray="2 1" />
         <circle cx="18" cy="18" r="11" fill="var(--color-paper-dark)" stroke={stroke} strokeWidth="1.2" />
         <line x1="18" y1="18" x2={ix} y2={iy} stroke={stroke} strokeWidth="2" strokeLinecap="round" />
         <circle cx="18" cy="18" r="1.5" fill={stroke} />
       </svg>
-      <span className="font-body text-[8px] opacity-60 leading-none">{knob.name}</span>
+      <span className="font-mono text-[8px] opacity-60 leading-none">{knob.name}</span>
       <span
-        className="font-body text-[9px] font-semibold leading-none"
-        style={highlighted ? { color: '#e0492c' } : undefined}
+        className="font-mono text-[10px] font-semibold leading-none tnum"
+        style={highlighted ? { color: 'var(--color-accent)' } : undefined}
       >
         {Number.isInteger(knob.value) ? knob.value : knob.value.toFixed(1)}
       </span>

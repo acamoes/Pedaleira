@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react'
 import { usePedalboardStore } from '../../store/usePedalboardStore'
-import { SketchButton } from '../ui/SketchButton'
 import { SketchInput } from '../ui/SketchInput'
 import { exportSetupJson, importSetupJson } from '../../utils/importExport'
+import logoUrl from '../../../logo.png'
 
 function SunIcon() {
   return (
@@ -60,22 +60,22 @@ export function Header() {
     setEditingName(false)
   }
 
-  return (
-    <header className="border-b-2 border-ink bg-paper flex items-center justify-between px-5 py-2 gap-4">
-      {/* Título com filtro SVG brush — vermelho dessaturado, alinhado com a board */}
-      <h1
-        className="font-title leading-none tracking-wider pl-5"
-        style={{
-          color: '#e0492c',
-          fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-          filter: 'url(#brush-roughen)',
-        }}
-      >
-        Pedaleira
-      </h1>
+  const seg = 'font-body text-[13px] text-ink px-3 py-1.5 hover:bg-paper-dark transition-colors ' +
+    'border-l-[1.5px] border-gray-light first:border-l-0 disabled:opacity-40 disabled:hover:bg-transparent'
 
-      {/* Controlos */}
-      <div className="flex items-center gap-2 flex-wrap justify-end">
+  return (
+    <header className="border-b-2 border-ink bg-paper flex items-center justify-between px-5 py-2.5 gap-4">
+      {/* Logótipo Pedaleira */}
+      <img
+        src={logoUrl}
+        alt="Pedaleira"
+        className="pl-5 select-none"
+        style={{ height: 'clamp(2.2rem, 4.6vw, 3.4rem)', width: 'auto' }}
+        draggable={false}
+      />
+
+      {/* Controlos — nome do setup + biblioteca agrupada + tema */}
+      <div className="flex items-center gap-3 flex-wrap justify-end">
         {/* Nome do setup */}
         {editingName ? (
           <SketchInput
@@ -83,69 +83,74 @@ export function Header() {
             onChange={(e) => setNameValue(e.target.value)}
             onBlur={commitRename}
             onKeyDown={(e) => { if (e.key === 'Enter') commitRename() }}
-            className="w-36"
+            className="w-40"
             autoFocus
           />
         ) : (
           <button
             type="button"
-            className="font-sketch text-sm text-ink hover:underline"
+            className="group flex items-center gap-2 border-2 border-gray-light rounded-hand
+              px-3 py-1.5 bg-paper hover:border-ink transition-colors"
             title="Clica para renomear"
             onClick={() => { setNameValue(currentSetup.name); setEditingName(true) }}
           >
-            {currentSetup.name}
+            <span className="font-mono text-[10px] uppercase tracking-wide text-gray-sketch">Setup</span>
+            <span className="font-body text-[13px] font-semibold text-ink">{currentSetup.name}</span>
+            <span className="text-gray-sketch opacity-60 group-hover:opacity-100 text-xs">✎</span>
           </button>
         )}
 
-        <SketchButton size="sm" variant="ghost" onClick={saveCurrentAsSetup}>Guardar</SketchButton>
+        {/* Biblioteca — uma peça segmentada (Guardar / JSON / Setups) */}
+        <div className="flex items-stretch border-2 border-ink rounded-hand bg-paper
+          shadow-sketch-sm overflow-hidden">
+          <button type="button" className={seg} onClick={saveCurrentAsSetup}>Guardar</button>
+          <button type="button" className={seg}
+            onClick={() => exportSetupJson(currentSetup)}
+            disabled={currentSetup.pedals.length === 0}
+            title="Exportar setup em JSON">↓ JSON</button>
+          <button type="button" className={seg}
+            onClick={() => fileInputRef.current?.click()}
+            title="Importar setup de JSON">↑ JSON</button>
 
-        {/* Export / Import JSON */}
-        <SketchButton size="sm" variant="ghost"
-          onClick={() => exportSetupJson(currentSetup)}
-          disabled={currentSetup.pedals.length === 0}>
-          ↓ JSON
-        </SketchButton>
-        <SketchButton size="sm" variant="ghost" onClick={() => fileInputRef.current?.click()}>
-          ↑ JSON
-        </SketchButton>
+          {/* Dropdown de setups */}
+          <div className="relative flex">
+            <button type="button" className={seg} onClick={() => setShowSetups((v) => !v)}>
+              Setups <span className="font-mono text-[11px] text-gray-sketch">({savedSetups.length})</span>
+            </button>
+            {showSetups && (
+              <div className="absolute right-0 top-full mt-1.5 bg-paper border-2 border-ink shadow-sketch z-50 min-w-[210px] rounded-hand-2 overflow-hidden">
+                {savedSetups.length === 0 ? (
+                  <p className="font-body text-xs text-gray-sketch p-3">Nenhum setup guardado.</p>
+                ) : savedSetups.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between px-3 py-2 border-b border-gray-light last:border-0 hover:bg-paper-dark">
+                    <button type="button" className="font-body text-[13px] text-ink flex-1 text-left"
+                      onClick={() => { loadSetup(s.id); setShowSetups(false) }}>
+                      {s.name}
+                    </button>
+                    <button type="button" className="text-gray-sketch hover:text-accent ml-2"
+                      onClick={() => deleteSetup(s.id)} title="Apagar setup">
+                      <svg width="10" height="10" viewBox="0 0 10 10">
+                        <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" strokeWidth="1.5"/>
+                        <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.5"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         <input ref={fileInputRef} type="file" accept="application/json,.json"
           onChange={handleImportFile} className="hidden" />
-
-        {/* Dropdown de setups */}
-        <div className="relative">
-          <SketchButton size="sm" variant="ghost" onClick={() => setShowSetups((v) => !v)}>
-            Setups ({savedSetups.length})
-          </SketchButton>
-          {showSetups && (
-            <div className="absolute right-0 top-full mt-1 bg-paper border-2 border-ink shadow-sketch z-50 min-w-[200px]">
-              {savedSetups.length === 0 ? (
-                <p className="font-body text-xs text-gray-sketch p-3">Nenhum setup guardado.</p>
-              ) : savedSetups.map((s) => (
-                <div key={s.id} className="flex items-center justify-between px-3 py-2 border-b border-gray-light last:border-0 hover:bg-paper-dark">
-                  <button type="button" className="font-body text-xs text-ink flex-1 text-left"
-                    onClick={() => { loadSetup(s.id); setShowSetups(false) }}>
-                    {s.name}
-                  </button>
-                  <button type="button" className="text-gray-sketch hover:text-ink ml-2"
-                    onClick={() => deleteSetup(s.id)}>
-                    <svg width="10" height="10" viewBox="0 0 10 10">
-                      <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" strokeWidth="1.5"/>
-                      <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.5"/>
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* Toggle tema */}
         <button
           type="button"
           title={theme === 'light' ? 'Tema escuro' : 'Tema claro'}
           onClick={toggleTheme}
-          className="w-8 h-8 flex items-center justify-center border-2 border-ink text-ink
-            hover:bg-paper-dark shadow-sketch-sm"
+          className="w-9 h-9 flex items-center justify-center border-2 border-ink rounded-hand
+            text-ink hover:bg-paper-dark shadow-sketch-sm active:translate-y-px active:shadow-none transition-all"
         >
           {theme === 'light' ? <MoonIcon /> : <SunIcon />}
         </button>

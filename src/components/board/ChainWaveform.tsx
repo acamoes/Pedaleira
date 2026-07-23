@@ -8,7 +8,7 @@ interface Props {
   analyser?: AnalyserNode | null
 }
 
-const LIVE_COLOR = '#2fae4f'   // verde "a dar som"
+const LIVE_COLOR = 'var(--color-live)'   // verde "a dar som"
 
 /** Efeito acumulado da cadeia; ao tocar, anima o sinal REAL da saída. */
 export function ChainWaveform({ pedals, isPlaying = false, analyser = null }: Props) {
@@ -47,19 +47,12 @@ export function ChainWaveform({ pedals, isPlaying = false, analyser = null }: Pr
   }, [isPlaying, analyser])
 
   return (
-    <div
-      className={`flex items-center gap-2 border-2 px-3 py-1.5 transition-all duration-200
-        ${isPlaying ? 'border-[3px] shadow-sketch' : 'border-2 shadow-sketch-sm'}`}
-      style={{
-        borderColor: isPlaying ? LIVE_COLOR : 'var(--color-ink)',
-        backgroundColor: 'var(--color-paper)',
-      }}
-    >
+    <div className="flex items-center gap-3 transition-all duration-200">
       <span
-        className="font-sketch text-xs whitespace-nowrap"
-        style={{ color: isPlaying ? LIVE_COLOR : 'var(--color-ink)' }}
+        className="font-mono text-[10px] uppercase tracking-wider whitespace-nowrap"
+        style={{ color: isPlaying ? LIVE_COLOR : 'var(--color-gray-sketch)' }}
       >
-        {isPlaying ? '♪ a tocar' : `Sinal final${pedals.length ? '' : ' (limpo)'}`}
+        {isPlaying ? '♪ a tocar' : `Sinal${pedals.length ? '' : ' limpo'}`}
       </span>
       <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="flex-1">
         <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke="var(--color-ink)" strokeWidth="0.5" opacity="0.2" />

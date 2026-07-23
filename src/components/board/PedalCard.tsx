@@ -8,6 +8,7 @@ import { effectAmount } from '../../utils/signal'
 
 interface Props {
   pedal: Pedal
+  connected: boolean   // está na cadeia ativa (tem cabos guitarra→…→amp)
   isDragging?: boolean
   onEdit: () => void
   onDragHandleMouseDown: (e: React.MouseEvent) => void
@@ -30,9 +31,9 @@ function isDarkBg(hex: string): boolean {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.45
 }
 
-export function PedalCard({ pedal, isDragging = false, onEdit, onDragHandleMouseDown }: Props) {
+export function PedalCard({ pedal, connected, isDragging = false, onEdit, onDragHandleMouseDown }: Props) {
   const {
-    togglePedalEnabled, updateKnobValue, updateSwitchValue,
+    disconnectPedal, updateKnobValue, updateSwitchValue,
     removePedal, duplicatePedal, highlightedKnobs,
   } = usePedalboardStore()
 
@@ -42,17 +43,17 @@ export function PedalCard({ pedal, isDragging = false, onEdit, onDragHandleMouse
 
   return (
     <div
-      className={`relative flex flex-col border-2 border-ink w-[120px] min-h-[170px]
-        shadow-sketch transition-opacity select-none
-        ${isDragging ? 'opacity-60 rotate-1 scale-105' : ''}
-        ${!pedal.enabled ? 'opacity-40' : ''}`}
+      className={`relative flex flex-col border-2 border-ink w-[120px] min-h-[170px] rounded-[9px]
+        shadow-sketch transition-all duration-150 select-none
+        ${isDragging ? 'opacity-60 rotate-1 scale-105' : 'hover:-translate-y-0.5 hover:shadow-[4px_6px_0_var(--color-ink)]'}
+        ${!connected ? 'opacity-40' : ''}`}
       style={{ backgroundColor: pedal.color || 'var(--color-paper)', color: textColor }}
     >
-      {/* Etiqueta de bypass quando desligado */}
-      {!pedal.enabled && (
+      {/* Etiqueta quando não tem cabo */}
+      {!connected && (
         <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[7px]
           bg-paper border border-ink px-1 text-ink uppercase tracking-wide whitespace-nowrap">
-          ✄ desligado
+          ✄ sem cabo
         </span>
       )}
 
@@ -64,13 +65,24 @@ export function PedalCard({ pedal, isDragging = false, onEdit, onDragHandleMouse
       >
         <div className="flex items-center justify-between">
           <span
-            className="font-mono text-[8px] border border-current/40 px-1 opacity-70"
+            className="font-mono text-[8px] border border-current/40 px-1 opacity-70 rounded-[2px]"
             style={{ color: textColor }}
           >
             {TYPE_LABELS[pedal.type] ?? '???'}
           </span>
-          {/* 3-dot drag indicator */}
-          <span className="opacity-30 text-[10px] leading-none" style={{ letterSpacing: '1px' }}>⋮⋮</span>
+          <span className="flex items-center gap-1.5">
+            {/* LED — verde a "dar sinal" quando ligado */}
+            <span
+              className="inline-block w-2 h-2 rounded-full border"
+              style={{
+                borderColor: textColor,
+                backgroundColor: connected ? 'var(--color-live)' : 'transparent',
+                boxShadow: connected ? '0 0 4px var(--color-live)' : 'none',
+              }}
+            />
+            {/* indicador de arrasto */}
+            <span className="opacity-30 text-[10px] leading-none" style={{ letterSpacing: '1px' }}>⋮⋮</span>
+          </span>
         </div>
         <p className="font-sketch text-[10px] font-bold leading-tight mt-0.5 opacity-70" style={{ color: textColor }}>
           {pedal.brand}
@@ -83,7 +95,7 @@ export function PedalCard({ pedal, isDragging = false, onEdit, onDragHandleMouse
       {/* ── Forma de onda: o que o pedal faz ao sinal ── */}
       <div className="px-2 pt-1.5 pb-1 border-b border-current/15">
         <WaveformViz
-          type={pedal.enabled ? pedal.type : 'tuner'}
+          type={connected ? pedal.type : 'tuner'}
           color={textColor}
           amount={effectAmount(pedal)}
         />
@@ -95,7 +107,7 @@ export function PedalCard({ pedal, isDragging = false, onEdit, onDragHandleMouse
           <KnobControl
             key={k.name}
             knob={k}
-            disabled={!pedal.enabled}
+            disabled={!connected}
             textColor={textColor}
             info={knobInfo(k.name)}
             highlighted={highlightedKnobs.includes(`${pedal.id}:${k.name}`)}
@@ -116,7 +128,7 @@ export function PedalCard({ pedal, isDragging = false, onEdit, onDragHandleMouse
             <SwitchToggle
               key={sw.name}
               sw={sw}
-              disabled={!pedal.enabled}
+              disabled={!connected}
               onChange={(val) => updateSwitchValue(pedal.id, sw.name, val)}
             />
           ))}
@@ -128,17 +140,18 @@ export function PedalCard({ pedal, isDragging = false, onEdit, onDragHandleMouse
         className="flex items-center justify-between px-2 py-1 border-t border-current/20 mt-auto"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {/* Bypass */}
+        {/* Footswitch — desliga o cabo do pedal (quando ligado) */}
         <button
           type="button"
-          title={pedal.enabled ? 'Bypass' : 'Ativar'}
-          onClick={() => togglePedalEnabled(pedal.id)}
-          className="w-6 h-6 flex items-center justify-center"
+          disabled={!connected}
+          title={connected ? 'Desligar o cabo deste pedal' : 'Arrasta um cabo até este pedal para o ligar'}
+          onClick={() => disconnectPedal(pedal.id)}
+          className="w-6 h-6 flex items-center justify-center disabled:opacity-50"
         >
           <svg width="18" height="18" viewBox="0 0 18 18">
             <ellipse cx="9" cy="9" rx="7" ry="7" fill="none" stroke={textColor} strokeWidth="1.5" />
             <ellipse cx="9" cy="9" rx="3.5" ry="3.5"
-              fill={pedal.enabled ? textColor : 'none'}
+              fill={connected ? textColor : 'none'}
               stroke={textColor}
               strokeWidth="1.5"
             />

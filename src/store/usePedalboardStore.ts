@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type {
   Pedal,
   PedalboardSetup,
+  Connection,
   TuneResult,
   IdentifyPedalResponse,
   TunePedalsResponse,
@@ -13,6 +14,11 @@ import {
   loadCurrentSetup,
   saveCurrentSetup,
 } from '../utils/localStorage'
+import {
+  GUITAR_JACK, AMP_JACK, inJackId, outJackId,
+  isOutputJack, isInputJack, jackPedalId,
+  connectedIds, withMigratedConnections,
+} from '../utils/chain'
 
 // Canvas constants (shared with Pedalboard)
 export const CANVAS_H = 420
@@ -42,7 +48,19 @@ function loadHistory(): SongHistoryEntry[] {
 }
 
 function makeEmptySetup(): PedalboardSetup {
-  return { id: uuidv4(), name: 'Novo Setup', pedals: [], createdAt: Date.now(), updatedAt: Date.now() }
+  return { id: uuidv4(), name: 'Novo Setup', pedals: [], connections: [], createdAt: Date.now(), updatedAt: Date.now() }
+}
+
+// `Pedal.enabled` é um espelho de "está na cadeia ativa" (fonte de verdade = connections).
+function syncEnabledPedals(pedals: Pedal[], connections: Connection[]): Pedal[] {
+  const ids = connectedIds(pedals, connections)
+  return pedals.map((p) => (p.enabled === ids.has(p.id) ? p : { ...p, enabled: ids.has(p.id) }))
+}
+
+// Remove todos os cabos que tocam um pedal (entrada ou saída).
+function stripPedalConnections(connections: Connection[], pedalId: string): Connection[] {
+  const io = new Set([inJackId(pedalId), outJackId(pedalId)])
+  return connections.filter((c) => !io.has(c.from) && !io.has(c.to))
 }
 
 function defaultX(index: number) { return 110 + (index % 4) * 155 }
@@ -93,6 +111,14 @@ function migratePedal(p: Pedal, index: number): Pedal {
   }
 }
 
+// Carrega um setup: migra pedais (x/y/color), deriva as connections a partir do
+// modelo antigo se não existirem, e sincroniza `enabled` com a cadeia ativa.
+function hydrateSetup(raw: PedalboardSetup): PedalboardSetup {
+  const withConn = withMigratedConnections(raw)   // usa o enabled+x original
+  const pedals = withConn.pedals.map(migratePedal)
+  return { ...withConn, pedals: syncEnabledPedals(pedals, withConn.connections) }
+}
+
 interface Store {
   theme: Theme
   toggleTheme: () => void
@@ -109,8 +135,10 @@ interface Store {
   duplicatePedal: (pedalId: string) => void
   movePedal: (pedalId: string, x: number, y: number) => void
   updatePedalColor: (pedalId: string, color: string) => void
-  togglePedalEnabled: (pedalId: string) => void
-  setAllEnabled: (enabled: boolean) => void
+  connectJacks: (a: string, b: string) => void
+  disconnectCable: (from: string, to: string) => void
+  disconnectPedal: (pedalId: string) => void
+  clearConnections: () => void
   updateKnobValue: (pedalId: string, knobName: string, value: number) => void
   updateSwitchValue: (pedalId: string, switchName: string, value: boolean) => void
   importSetup: (setup: PedalboardSetup) => void
@@ -128,16 +156,8 @@ interface Store {
 }
 
 export const usePedalboardStore = create<Store>((set, get) => {
-  const rawCurrent  = loadCurrentSetup() ?? makeEmptySetup()
-  const persistedCurrent: PedalboardSetup = {
-    ...rawCurrent,
-    pedals: rawCurrent.pedals.map(migratePedal),
-  }
-  const rawSetups = loadSavedSetups()
-  const persistedSetups = rawSetups.map((s) => ({
-    ...s,
-    pedals: s.pedals.map(migratePedal),
-  }))
+  const persistedCurrent = hydrateSetup(loadCurrentSetup() ?? makeEmptySetup())
+  const persistedSetups = loadSavedSetups().map(hydrateSetup)
 
   // Marca a migração como feita para não voltar a desligar em recargas futuras
   if (needsBypassMigration) localStorage.setItem(BYPASS_MIGRATION_KEY, '1')
@@ -173,14 +193,19 @@ export const usePedalboardStore = create<Store>((set, get) => {
     },
 
     removePedal(pedalId) {
-      set((s) => ({
-        currentSetup: {
-          ...s.currentSetup,
-          pedals: s.currentSetup.pedals.filter((p) => p.id !== pedalId),
-          updatedAt: Date.now(),
-        },
-        tuneResult: null,
-      }))
+      set((s) => {
+        const pedals = s.currentSetup.pedals.filter((p) => p.id !== pedalId)
+        const connections = stripPedalConnections(s.currentSetup.connections, pedalId)
+        return {
+          currentSetup: {
+            ...s.currentSetup,
+            pedals: syncEnabledPedals(pedals, connections),
+            connections,
+            updatedAt: Date.now(),
+          },
+          tuneResult: null,
+        }
+      })
       persist()
     },
 
@@ -191,6 +216,7 @@ export const usePedalboardStore = create<Store>((set, get) => {
         const copy: Pedal = {
           ...src,
           id: uuidv4(),
+          enabled: false,   // a cópia entra desconectada (sem cabos)
           x: src.x + 24,
           y: src.y + 24,
           knobs: src.knobs.map((k) => ({ ...k })),
@@ -207,11 +233,12 @@ export const usePedalboardStore = create<Store>((set, get) => {
       persist()
     },
 
-    setAllEnabled(enabled) {
+    clearConnections() {
       set((s) => ({
         currentSetup: {
           ...s.currentSetup,
-          pedals: s.currentSetup.pedals.map((p) => ({ ...p, enabled })),
+          pedals: syncEnabledPedals(s.currentSetup.pedals, []),
+          connections: [],
           updatedAt: Date.now(),
         },
       }))
@@ -240,23 +267,53 @@ export const usePedalboardStore = create<Store>((set, get) => {
       persist()
     },
 
-    togglePedalEnabled(pedalId) {
+    connectJacks(a, b) {
+      // normaliza para from = saída, to = entrada
+      let from = a, to = b
+      if (isInputJack(a) && isOutputJack(b)) { from = b; to = a }
+      if (!isOutputJack(from) || !isInputJack(to)) return
+      const fp = jackPedalId(from), tp = jackPedalId(to)
+      if (fp && tp && fp === tp) return   // não se liga um pedal a si próprio
       set((s) => {
-        const pedals = s.currentSetup.pedals
-        const target = pedals.find((p) => p.id === pedalId)
-        const turningOn = target ? !target.enabled : false
-        // ao entrar na chain, coloca-o no fim (à direita do último pedal ligado)
-        const rowY = Math.floor((CANVAS_H - PEDAL_H) / 2)
-        const enabledXs = pedals.filter((p) => p.enabled && p.id !== pedalId).map((p) => p.x)
-        const nextX = enabledXs.length ? Math.max(...enabledXs) + PEDAL_W + 36 : 110
+        // 1 cabo por saída e 1 por entrada → remove conflitos antes de ligar
+        const connections = s.currentSetup.connections
+          .filter((c) => c.from !== from && c.to !== to)
+          .concat({ from, to })
         return {
           currentSetup: {
             ...s.currentSetup,
-            pedals: pedals.map((p) =>
-              p.id === pedalId
-                ? { ...p, enabled: !p.enabled, ...(turningOn ? { x: nextX, y: rowY } : {}) }
-                : p,
-            ),
+            pedals: syncEnabledPedals(s.currentSetup.pedals, connections),
+            connections,
+            updatedAt: Date.now(),
+          },
+        }
+      })
+      persist()
+    },
+
+    disconnectCable(from, to) {
+      set((s) => {
+        const connections = s.currentSetup.connections.filter((c) => !(c.from === from && c.to === to))
+        return {
+          currentSetup: {
+            ...s.currentSetup,
+            pedals: syncEnabledPedals(s.currentSetup.pedals, connections),
+            connections,
+            updatedAt: Date.now(),
+          },
+        }
+      })
+      persist()
+    },
+
+    disconnectPedal(pedalId) {
+      set((s) => {
+        const connections = stripPedalConnections(s.currentSetup.connections, pedalId)
+        return {
+          currentSetup: {
+            ...s.currentSetup,
+            pedals: syncEnabledPedals(s.currentSetup.pedals, connections),
+            connections,
             updatedAt: Date.now(),
           },
         }
@@ -337,7 +394,6 @@ export const usePedalboardStore = create<Store>((set, get) => {
           if (setting) {
             next = {
               ...next,
-              enabled: setting.enabled,
               knobs: next.knobs.map((k) => {
                 const v = setting.knobs[k.name]
                 if (v === undefined) return k
@@ -351,15 +407,34 @@ export const usePedalboardStore = create<Store>((set, get) => {
               }),
             }
           }
-          // Reposiciona os pedais ativos pela ordem da resposta (liga-os em cadeia)
+          // Reposiciona os pedais escolhidos pela ordem da resposta (só estética)
           if (pos !== undefined) {
             next = { ...next, x: startX + pos * spacing, y: rowY }
           }
           return next
         })
 
+        // Liga os cabos guitarra→(pedais escolhidos, na ordem)→amp.
+        // Um pedal marcado como bypass (setting.enabled === false) fica de fora.
+        const wired = orderedIds.filter((id) => {
+          const st = response.settings.find((x) => x.pedalId === id)
+          return st ? st.enabled : true
+        })
+        const connections: Connection[] = []
+        let prev = GUITAR_JACK
+        for (const id of wired) {
+          connections.push({ from: prev, to: inJackId(id) })
+          prev = outJackId(id)
+        }
+        if (wired.length) connections.push({ from: prev, to: AMP_JACK })
+
         return {
-          currentSetup: { ...s.currentSetup, pedals: updatedPedals, updatedAt: Date.now() },
+          currentSetup: {
+            ...s.currentSetup,
+            pedals: syncEnabledPedals(updatedPedals, connections),
+            connections,
+            updatedAt: Date.now(),
+          },
           tuneResult: { response, appliedAt: Date.now() },
           highlightedKnobs: highlights,
         }
@@ -370,11 +445,7 @@ export const usePedalboardStore = create<Store>((set, get) => {
     },
 
     importSetup(setup) {
-      const migrated: PedalboardSetup = {
-        ...setup,
-        id: setup.id || uuidv4(),
-        pedals: setup.pedals.map((p, i) => migratePedal(p, i)),
-      }
+      const migrated = hydrateSetup({ ...setup, id: setup.id || uuidv4() })
       set({ currentSetup: migrated, tuneResult: null })
       persist()
     },

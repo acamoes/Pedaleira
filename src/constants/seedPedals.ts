@@ -8,6 +8,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Ibanez',
     model: 'Tube Screamer Mini',
     type: 'overdrive',
+    color: '#3f8f4a',
     knobs: [
       { name: 'Drive', min: 0, max: 10, default: 5 },
       { name: 'Tone',  min: 0, max: 10, default: 5 },
@@ -20,6 +21,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Ibanez',
     model: 'TS9 Tube Screamer',
     type: 'overdrive',
+    color: '#3f8f4a',
     knobs: [
       { name: 'Drive', min: 0, max: 10, default: 5 },
       { name: 'Tone',  min: 0, max: 10, default: 5 },
@@ -32,6 +34,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Ibanez',
     model: 'Tube Screamer',
     type: 'overdrive',
+    color: '#3f8f4a',
     knobs: [
       { name: 'Drive', min: 0, max: 10, default: 5 },
       { name: 'Tone',  min: 0, max: 10, default: 5 },
@@ -70,6 +73,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'MXR',
     model: 'Carbon Copy Analog Delay',
     type: 'delay',
+    color: '#2f6b4a',
     knobs: [
       { name: 'Mix',   min: 0, max: 10, default: 3 },
       { name: 'Regen', min: 0, max: 10, default: 3 },
@@ -82,6 +86,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'MXR',
     model: 'Carbon Copy Analog Delay',
     type: 'delay',
+    color: '#2f6b4a',
     knobs: [
       { name: 'Mix',   min: 0, max: 10, default: 3 },
       { name: 'Regen', min: 0, max: 10, default: 3 },
@@ -94,6 +99,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Strymon',
     model: 'BigSky Reverb',
     type: 'reverb',
+    color: '#b9c0c4',
     knobs: [
       { name: 'Mix',    min: 0, max: 10, default: 5 },
       { name: 'Decay',  min: 0, max: 10, default: 5 },
@@ -109,6 +115,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Dunlop',
     model: 'GCB95 Cry Baby Wah',
     type: 'wah',
+    color: '#1e1e1e',
     knobs: [],
     switches: [],
   },
@@ -117,6 +124,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Dunlop',
     model: 'GCB95 Cry Baby Wah',
     type: 'wah',
+    color: '#1e1e1e',
     knobs: [],
     switches: [],
   },
@@ -138,6 +146,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Boss',
     model: 'BD-2 Blues Driver',
     type: 'overdrive',
+    color: '#3a7ec0',
     knobs: [
       { name: 'Level', min: 0, max: 10, default: 5 },
       { name: 'Tone',  min: 0, max: 10, default: 5 },
@@ -150,6 +159,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Electro-Harmonix',
     model: 'Big Muff Pi',
     type: 'fuzz',
+    color: '#b9b6ad',
     knobs: [
       { name: 'Volume',    min: 0, max: 10, default: 5 },
       { name: 'Tone',      min: 0, max: 10, default: 5 },
@@ -162,6 +172,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Electro-Harmonix',
     model: 'Big Muff Pi',
     type: 'fuzz',
+    color: '#b9b6ad',
     knobs: [
       { name: 'Volume',    min: 0, max: 10, default: 5 },
       { name: 'Tone',      min: 0, max: 10, default: 5 },
@@ -200,6 +211,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Fulltone',
     model: 'OCD Overdrive',
     type: 'overdrive',
+    color: '#c9b688',
     knobs: [
       { name: 'Volume', min: 0, max: 10, default: 5 },
       { name: 'Drive',  min: 0, max: 10, default: 5 },
@@ -212,6 +224,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Pro Co',
     model: 'RAT 2 Distortion',
     type: 'distortion',
+    color: '#232323',
     knobs: [
       { name: 'Distortion', min: 0, max: 10, default: 5 },
       { name: 'Filter',     min: 0, max: 10, default: 5 },
@@ -267,6 +280,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Eventide',
     model: 'H9 Multi-Effect',
     type: 'reverb',
+    color: '#ededed',
     knobs: [
       { name: 'Mix',    min: 0, max: 10, default: 5 },
       { name: 'P1',     min: 0, max: 10, default: 5 },
@@ -330,6 +344,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'TC Electronic',
     model: 'PolyTune 3 Tuner',
     type: 'tuner',
+    color: '#3f454a',
     knobs: [],
     switches: [],
   },
@@ -338,6 +353,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Boss',
     model: 'CH-1 Super Chorus',
     type: 'chorus',
+    color: '#8fb8dd',
     knobs: [
       { name: 'EQ',    min: 0, max: 10, default: 5 },
       { name: 'Rate',  min: 0, max: 10, default: 5 },
@@ -351,6 +367,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'MXR',
     model: 'Dyna Comp Compressor',
     type: 'compressor',
+    color: '#b5312a',
     knobs: [
       { name: 'Output',     min: 0, max: 10, default: 5 },
       { name: 'Sensitivity', min: 0, max: 10, default: 5 },
@@ -362,6 +379,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Boss',
     model: 'DD-3 Digital Delay',
     type: 'delay',
+    color: '#dcdcd4',
     knobs: [
       { name: 'E.Level', min: 0, max: 10, default: 5 },
       { name: 'F.Back',  min: 0, max: 10, default: 3 },
@@ -374,6 +392,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Boss',
     model: 'RV-6 Reverb',
     type: 'reverb',
+    color: '#8fbcc4',
     knobs: [
       { name: 'E.Level', min: 0, max: 10, default: 5 },
       { name: 'Tone',    min: 0, max: 10, default: 5 },
@@ -388,6 +407,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'TC Electronic',
     model: 'Afterglow Chorus',
     type: 'chorus',
+    color: '#b8bdbe',
     knobs: [
       { name: 'Speed', min: 0, max: 10, default: 5 },
       { name: 'Depth', min: 0, max: 10, default: 5 },
@@ -400,6 +420,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'TC Electronic',
     model: 'Hall of Fame 2 Reverb',
     type: 'reverb',
+    color: '#3d7d5a',
     knobs: [
       { name: 'Decay', min: 0, max: 10, default: 5 },
       { name: 'Tone',  min: 0, max: 10, default: 5 },
@@ -412,6 +433,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'TC Electronic',
     model: 'Dark Matter Distortion',
     type: 'distortion',
+    color: '#2c2f33',
     knobs: [
       { name: 'Drive',   min: 0, max: 10, default: 5 },
       { name: 'Level',   min: 0, max: 10, default: 5 },
@@ -425,6 +447,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'TC Electronic',
     model: "Sub'N'Up Mini Octaver",
     type: 'octaver',
+    color: '#6b7075',
     knobs: [
       { name: 'Dry',  min: 0, max: 10, default: 5 },
       { name: 'Up',   min: 0, max: 10, default: 3 },
@@ -437,6 +460,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'TC Electronic',
     model: 'Flashback Delay',
     type: 'delay',
+    color: '#4e8f57',
     knobs: [
       { name: 'Delay',    min: 0, max: 10, default: 5 },
       { name: 'Feedback', min: 0, max: 10, default: 3 },
@@ -449,6 +473,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'TC Electronic',
     model: 'Forcefield Compressor',
     type: 'compressor',
+    color: '#7d8288',
     knobs: [
       { name: 'Comp',  min: 0, max: 10, default: 5 },
       { name: 'Level', min: 0, max: 10, default: 5 },
@@ -460,6 +485,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'TC Electronic',
     model: 'June-60 Chorus',
     type: 'chorus',
+    color: '#9aa4ad',
     knobs: [
       { name: 'Rate',  min: 0, max: 10, default: 5 },
       { name: 'Depth', min: 0, max: 10, default: 5 },
@@ -477,6 +503,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Boss',
     model: 'RC-30 Loop Station',
     type: 'looper',
+    color: '#2f9fa0',
     knobs: [
       { name: 'Track 1', min: 0, max: 10, default: 7 },
       { name: 'Track 2', min: 0, max: 10, default: 7 },
@@ -491,6 +518,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Pro Co',
     model: 'RAT 2 Distortion',
     type: 'distortion',
+    color: '#232323',
     knobs: [
       { name: 'Distortion', min: 0, max: 10, default: 5 },
       { name: 'Filter',     min: 0, max: 10, default: 5 },
@@ -505,6 +533,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     brand: 'Behringer',
     model: 'SF300 Super Fuzz',
     type: 'fuzz',
+    color: '#d5721f',
     knobs: [
       { name: 'Level',  min: 0, max: 10, default: 5 },
       { name: 'Treble', min: 0, max: 10, default: 5 },

@@ -52,12 +52,23 @@ export interface Pedal {
   y: number
 }
 
+// ─── Ligações (patch cables) ─────────────────────────────────────────────────
+
+// Uma ligação é um cabo de uma SAÍDA para uma ENTRADA.
+// Fichas identificadas por string: 'guitar' (saída), 'amp' (entrada),
+// '<pedalId>:out' (saída de pedal), '<pedalId>:in' (entrada de pedal).
+export interface Connection {
+  from: string   // ficha de saída: 'guitar' | '<pedalId>:out'
+  to: string     // ficha de entrada: 'amp' | '<pedalId>:in'
+}
+
 // ─── Setup completo ──────────────────────────────────────────────────────────
 
 export interface PedalboardSetup {
   id: string
   name: string
   pedals: Pedal[]
+  connections: Connection[]   // cadeia montada manualmente (guitarra→…→amp)
   createdAt: number
   updatedAt: number
 }
