@@ -115,8 +115,10 @@ const E_MAJOR = [82.41, 123.47, 164.81, 207.65, 246.94, 329.63]
 
 // ─── Utilidades de knobs ──────────────────────────────────────────────────────
 
+// Devolve o valor do knob reescalado para 0..10, qualquer que seja o seu intervalo
+// (ex.: sliders de EQ em ±18 dB)
 function knob(p: Pedal, names: string[], fallback: number): number {
-  const lower = p.knobs.map((k) => ({ n: k.name.toLowerCase(), v: k.value }))
+  const lower = p.knobs.map((k) => ({ n: k.name.toLowerCase(), v: ((k.value - k.min) / (k.max - k.min || 1)) * 10 }))
   for (const name of names) {
     const exact = lower.find((k) => k.n === name)
     if (exact) return exact.v
@@ -307,7 +309,30 @@ function buildBoost(c: AudioContext, p: Pedal): FxNode {
   return { input: g, output: g }
 }
 
+// "100 Hz", "1.6 kHz" → frequência em Hz (null se o nome não for uma banda)
+function bandFreq(name: string): number | null {
+  const m = name.match(/^([\d.]+)\s*(k?)hz$/i)
+  return m ? parseFloat(m[1]) * (m[2] ? 1000 : 1) : null
+}
+
 function buildEQ(c: AudioContext, p: Pedal): FxNode {
+  // EQ gráfico (sliders por banda, em dB): um filtro peaking por banda, em série
+  const bands = p.knobs
+    .map((k) => ({ k, freq: bandFreq(k.name) }))
+    .filter((b): b is { k: typeof b.k; freq: number } => b.freq !== null)
+  if (bands.length > 0) {
+    const filters = bands.map(({ k, freq }) => {
+      const f = c.createBiquadFilter()
+      f.type = 'peaking'
+      f.frequency.value = freq
+      f.Q.value = 1.4
+      f.gain.value = k.value
+      return f
+    })
+    filters.reduce((a, b) => { a.connect(b); return b })
+    return { input: filters[0], output: filters[filters.length - 1] }
+  }
+
   const f = c.createBiquadFilter()
   f.type = 'highshelf'
   f.frequency.value = 2000

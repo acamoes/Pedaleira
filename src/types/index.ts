@@ -6,6 +6,8 @@ export interface Knob {
   max: number
   default: number
   value: number
+  step?: number      // passo discreto (ex.: 1 para seletores); omisso = contínuo (0.1)
+  labels?: string[]  // nomes das posições de um seletor (labels[value - min])
 }
 
 export interface PedalSwitch {
@@ -80,7 +82,7 @@ export interface IdentifyPedalResponse {
   brand: string
   model: string
   type: EffectType
-  knobs: Array<{ name: string; min: number; max: number; default: number }>
+  knobs: Array<{ name: string; min: number; max: number; default: number; step?: number; labels?: string[] }>
   switches: Array<{ name: string; default: boolean }>
   color?: string   // cor default do corpo (hex), se conhecida
 }

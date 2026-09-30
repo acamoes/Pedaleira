@@ -31,7 +31,8 @@ export function KnobControl({ knob, onChange, disabled = false, textColor, info,
         const dy    = startY.current - ev.clientY
         const range = knob.max - knob.min
         const next  = Math.min(knob.max, Math.max(knob.min, startVal.current + (dy / 80) * range))
-        onChange(Math.round(next * 10) / 10)
+        const step  = knob.step
+        onChange(step ? knob.min + Math.round((next - knob.min) / step) * step : Math.round(next * 10) / 10)
       }
       const onUp = () => {
         startY.current = null
@@ -49,6 +50,8 @@ export function KnobControl({ knob, onChange, disabled = false, textColor, info,
   const ix = 18 + 12 * Math.sin(rad)
   const iy = 18 - 12 * Math.cos(rad)
   const stroke = textColor ?? 'currentColor'
+  const label = knob.labels?.[Math.round(knob.value - knob.min)]
+  const display = label ?? (Number.isInteger(knob.value) ? knob.value : knob.value.toFixed(1))
 
   return (
     <div
@@ -72,7 +75,7 @@ export function KnobControl({ knob, onChange, disabled = false, textColor, info,
         className="font-mono text-[10px] font-semibold leading-none tnum"
         style={highlighted ? { color: 'var(--color-accent)' } : undefined}
       >
-        {Number.isInteger(knob.value) ? knob.value : knob.value.toFixed(1)}
+        {display}
       </span>
     </div>
   )

@@ -2,6 +2,13 @@ import type { Pedal, TunePedalsResponse } from '../types'
 
 // ─── A) Construir a pergunta (prompt) ────────────────────────────────────────
 
+// Knobs 0–10 aparecem só pelo nome; seletores e intervalos diferentes (ex.: ±18 dB) são explicitados
+function describeKnob(k: Pedal['knobs'][number]): string {
+  if (k.labels?.length) return `${k.name} (${k.labels.map((l, i) => `${k.min + i}=${l}`).join(', ')})`
+  if (k.min !== 0 || k.max !== 10) return `${k.name} (${k.min} a ${k.max})`
+  return k.name
+}
+
 /**
  * Gera a pergunta a copiar para um LLM, no formato pedido pelo utilizador:
  * lista de pedais (com os knobs de cada um) + música + pedido de ordem e tabela.
@@ -9,7 +16,7 @@ import type { Pedal, TunePedalsResponse } from '../types'
 export function buildTunePrompt(pedals: Pedal[], song: string, artist: string): string {
   const list = pedals
     .map((p) => {
-      const knobs = p.knobs.map((k) => k.name).join(', ') || 'sem knobs'
+      const knobs = p.knobs.map(describeKnob).join(', ') || 'sem knobs'
       const sw = p.switches.length ? `; switches: ${p.switches.map((s) => s.name).join(', ')}` : ''
       return `- ${p.brand} ${p.model} (${p.type}) — knobs: ${knobs}${sw}`
     })
@@ -107,11 +114,26 @@ function detectOrder(answer: string, pedals: Pedal[]): string[] {
 function extractKnobs(line: string, pedal: Pedal): Record<string, number> {
   const found: Record<string, number> = {}
 
-  // 1) por nome: "Drive: 7", "Tone 6", "| Level | 5 |", "Dist = 7"
-  for (const k of pedal.knobs) {
-    const re = new RegExp(escapeRegex(k.name) + '\\s*[^0-9\\n]{0,6}?(\\d+(?:[.,]\\d+)?)', 'i')
-    const m = line.match(re)
-    if (m) found[k.name] = clamp(parseFloat(m[1].replace(',', '.')), k.min, k.max)
+  // 1) por nome: "Drive: 7", "Tone 6", "| Level | 5 |", "Dist = 7", "100 Hz: -3", "Mode: Poly"
+  //    Nomes mais longos primeiro e o trecho casado é apagado, para "Sub" não apanhar "Sub 2".
+  let rest = line
+  for (const k of [...pedal.knobs].sort((a, b) => b.name.length - a.name.length)) {
+    const re = new RegExp(escapeRegex(k.name) + '\\s*[^0-9\\n+\\-−]{0,6}?([+\\-−]?\\d+(?:[.,]\\d+)?)', 'i')
+    const m = rest.match(re)
+    if (m) {
+      found[k.name] = clamp(parseFloat(m[1].replace(',', '.').replace('−', '-')), k.min, k.max)
+      rest = rest.replace(m[0], ' ')
+      continue
+    }
+    // seletor indicado pelo nome da posição
+    for (const [i, label] of (k.labels ?? []).entries()) {
+      const lm = rest.match(new RegExp(escapeRegex(k.name) + '\\s*[^\\n]{0,6}?' + escapeRegex(label), 'i'))
+      if (lm) {
+        found[k.name] = k.min + i
+        rest = rest.replace(lm[0], ' ')
+        break
+      }
+    }
   }
   if (Object.keys(found).length > 0) return found
 
@@ -121,8 +143,8 @@ function extractKnobs(line: string, pedal: Pedal): Record<string, number> {
   for (const cand of pedalCandidates(pedal)) {
     stripped = stripped.replace(new RegExp(escapeRegex(cand), 'ig'), ' ')
   }
-  const nums = (stripped.match(/(?<![\w.])\d+(?:[.,]\d+)?(?![\w])/g) ?? []).map((n) =>
-    parseFloat(n.replace(',', '.')),
+  const nums = (stripped.match(/(?<![\w.])[+\-−]?\d+(?:[.,]\d+)?(?![\w])/g) ?? []).map((n) =>
+    parseFloat(n.replace(',', '.').replace('−', '-')),
   )
   if (nums.length >= pedal.knobs.length && pedal.knobs.length > 0) {
     pedal.knobs.forEach((k, i) => { found[k.name] = clamp(nums[i], k.min, k.max) })

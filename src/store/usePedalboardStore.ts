@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import type {
+  Knob,
   Pedal,
   PedalboardSetup,
   Connection,
@@ -66,9 +67,11 @@ function stripPedalConnections(connections: Connection[], pedalId: string): Conn
 function defaultX(index: number) { return 110 + (index % 4) * 155 }
 function defaultY() { return Math.floor((CANVAS_H - PEDAL_H) / 2) }   // centrado verticalmente
 
-// Valida/normaliza o valor de um knob: dentro do intervalo e arredondado a 1 casa
-function clampKnob(value: number, min: number, max: number): number {
-  const v = Math.max(min, Math.min(max, value))
+// Valida/normaliza o valor de um knob: dentro do intervalo e arredondado ao passo
+// (seletores com `step`) ou a 1 casa decimal (knobs contínuos)
+function clampKnob(value: number, k: Knob): number {
+  const v = Math.max(k.min, Math.min(k.max, value))
+  if (k.step) return Math.max(k.min, Math.min(k.max, k.min + Math.round((v - k.min) / k.step) * k.step))
   return Math.round(v * 10) / 10
 }
 
@@ -327,7 +330,7 @@ export const usePedalboardStore = create<Store>((set, get) => {
           ...s.currentSetup,
           pedals: s.currentSetup.pedals.map((p) =>
             p.id === pedalId
-              ? { ...p, knobs: p.knobs.map((k) => k.name === knobName ? { ...k, value: clampKnob(value, k.min, k.max) } : k) }
+              ? { ...p, knobs: p.knobs.map((k) => k.name === knobName ? { ...k, value: clampKnob(value, k) } : k) }
               : p,
           ),
           updatedAt: Date.now(),
@@ -397,7 +400,7 @@ export const usePedalboardStore = create<Store>((set, get) => {
               knobs: next.knobs.map((k) => {
                 const v = setting.knobs[k.name]
                 if (v === undefined) return k
-                const nv = clampKnob(v, k.min, k.max)
+                const nv = clampKnob(v, k)
                 if (nv !== k.value) highlights.push(`${pedal.id}:${k.name}`)
                 return { ...k, value: nv }
               }),

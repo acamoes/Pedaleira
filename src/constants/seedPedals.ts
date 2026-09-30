@@ -187,7 +187,7 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     type: 'overdrive',
     color: '#3f8f4a',
     knobs: [
-      { name: 'Overdrive', min: 0, max: 10, default: 5 },
+      { name: 'Drive',     min: 0, max: 10, default: 5 },
       { name: 'Tone',      min: 0, max: 10, default: 5 },
       { name: 'Level',     min: 0, max: 10, default: 5 },
     ],
@@ -402,6 +402,62 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
   },
 
   // ─── TC Electronic ─────────────────────────────────────────────────────────
+  'tc electronic forcefield': {
+    recognized: true,
+    brand: 'TC Electronic',
+    model: 'Forcefield Compressor',
+    type: 'compressor',
+    color: '#7d8288',
+    knobs: [
+      { name: 'Sustain', min: 0, max: 10, default: 5 },
+      { name: 'Attack',  min: 0, max: 10, default: 5 },
+      { name: 'Level',   min: 0, max: 10, default: 5 },
+    ],
+    switches: [],
+  },
+  'tc electronic sub n up': {
+    recognized: true,
+    brand: 'TC Electronic',
+    model: "Sub'N'Up Octaver",
+    type: 'octaver',
+    color: '#6b7075',
+    knobs: [
+      { name: 'Dry',   min: 0, max: 10, default: 5 },
+      { name: 'Up',    min: 0, max: 10, default: 3 },
+      { name: 'Sub',   min: 0, max: 10, default: 3 },
+      { name: 'Sub 2', min: 0, max: 10, default: 0 },
+      { name: 'Mode',  min: 1, max: 3, default: 1, step: 1, labels: ['Poly', 'TonePrint', 'Classic'] },
+    ],
+    switches: [],
+  },
+  'tc electronic dark matter': {
+    recognized: true,
+    brand: 'TC Electronic',
+    model: 'Dark Matter Distortion',
+    type: 'distortion',
+    color: '#2c2f33',
+    knobs: [
+      { name: 'Gain',   min: 0, max: 10, default: 5 },
+      { name: 'Bass',   min: 0, max: 10, default: 5 },
+      { name: 'Treble', min: 0, max: 10, default: 5 },
+      { name: 'Level',  min: 0, max: 10, default: 5 },
+    ],
+    switches: [{ name: 'Voice', default: false }],
+  },
+  'tc electronic 3rd dimension': {
+    recognized: true,
+    brand: 'TC Electronic',
+    model: '3rd Dimension Chorus',
+    type: 'chorus',
+    // sem knobs: 4 botões de preset de chorus
+    knobs: [],
+    switches: [
+      { name: '1', default: true },
+      { name: '2', default: false },
+      { name: '3', default: false },
+      { name: '4', default: false },
+    ],
+  },
   'tc electronic afterglow': {
     recognized: true,
     brand: 'TC Electronic',
@@ -409,11 +465,29 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     type: 'chorus',
     color: '#b8bdbe',
     knobs: [
-      { name: 'Speed', min: 0, max: 10, default: 5 },
+      { name: 'Rate',  min: 0, max: 10, default: 5 },
       { name: 'Depth', min: 0, max: 10, default: 5 },
-      { name: 'Level', min: 0, max: 10, default: 5 },
+      { name: 'Mix',   min: 0, max: 10, default: 5 },
     ],
     switches: [],
+  },
+  'tc electronic flashback 2': {
+    recognized: true,
+    brand: 'TC Electronic',
+    model: 'Flashback 2 Delay',
+    type: 'delay',
+    color: '#4e8f57',
+    knobs: [
+      { name: 'Delay',    min: 0, max: 10, default: 5 },
+      { name: 'Feedback', min: 0, max: 10, default: 3 },
+      { name: 'Level',    min: 0, max: 10, default: 5 },
+      {
+        name: 'Type', min: 1, max: 12, default: 1, step: 1,
+        labels: ['2290', 'Analog', 'Tape', 'Dynamic', 'Mod', 'Crystal', 'Reverse', 'Lo-Fi', 'TP1', 'TP2', 'TP3', 'Looper'],
+      },
+      { name: 'Subdiv', min: 1, max: 3, default: 1, step: 1, labels: ['¼', '⅛·', '¼+⅛·'] },
+    ],
+    switches: [{ name: 'MASH', default: false }],
   },
   'tc electronic hall of fame 2': {
     recognized: true,
@@ -425,60 +499,15 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
       { name: 'Decay', min: 0, max: 10, default: 5 },
       { name: 'Tone',  min: 0, max: 10, default: 5 },
       { name: 'Level', min: 0, max: 10, default: 5 },
+      {
+        name: 'Type', min: 1, max: 11, default: 2, step: 1,
+        labels: ['Room', 'Hall', 'Spring', 'Plate', 'Church', 'Mod', 'Lo-Fi', 'Shimmer', 'TP1', 'TP2', 'TP3'],
+      },
     ],
-    switches: [{ name: 'MASH', default: false }],
-  },
-  'tc electronic dark matter': {
-    recognized: true,
-    brand: 'TC Electronic',
-    model: 'Dark Matter Distortion',
-    type: 'distortion',
-    color: '#2c2f33',
-    knobs: [
-      { name: 'Drive',   min: 0, max: 10, default: 5 },
-      { name: 'Level',   min: 0, max: 10, default: 5 },
-      { name: 'Bass',    min: 0, max: 10, default: 5 },
-      { name: 'Treble',  min: 0, max: 10, default: 5 },
+    switches: [
+      { name: 'Pre-Delay Long', default: false },
+      { name: 'MASH', default: false },
     ],
-    switches: [{ name: 'Voice', default: false }],
-  },
-  'tc electronic sub n up mini': {
-    recognized: true,
-    brand: 'TC Electronic',
-    model: "Sub'N'Up Mini Octaver",
-    type: 'octaver',
-    color: '#6b7075',
-    knobs: [
-      { name: 'Dry',  min: 0, max: 10, default: 5 },
-      { name: 'Up',   min: 0, max: 10, default: 3 },
-      { name: 'Sub',  min: 0, max: 10, default: 3 },
-    ],
-    switches: [],
-  },
-  'tc electronic flashback': {
-    recognized: true,
-    brand: 'TC Electronic',
-    model: 'Flashback Delay',
-    type: 'delay',
-    color: '#4e8f57',
-    knobs: [
-      { name: 'Delay',    min: 0, max: 10, default: 5 },
-      { name: 'Feedback', min: 0, max: 10, default: 3 },
-      { name: 'Level',    min: 0, max: 10, default: 5 },
-    ],
-    switches: [],
-  },
-  'tc electronic forcefield': {
-    recognized: true,
-    brand: 'TC Electronic',
-    model: 'Forcefield Compressor',
-    type: 'compressor',
-    color: '#7d8288',
-    knobs: [
-      { name: 'Comp',  min: 0, max: 10, default: 5 },
-      { name: 'Level', min: 0, max: 10, default: 5 },
-    ],
-    switches: [],
   },
   'tc electronic june-60': {
     recognized: true,
@@ -505,9 +534,71 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
     type: 'looper',
     color: '#2f9fa0',
     knobs: [
-      { name: 'Track 1', min: 0, max: 10, default: 7 },
-      { name: 'Track 2', min: 0, max: 10, default: 7 },
-      { name: 'Rhythm',  min: 0, max: 10, default: 3 },
+      { name: 'Track 1',      min: 0, max: 10, default: 7 },
+      { name: 'Track 2',      min: 0, max: 10, default: 7 },
+      { name: 'Mic Input',    min: 0, max: 10, default: 5 },
+      { name: 'Rhythm Level', min: 0, max: 10, default: 3 },
+      { name: 'Track Sel',    min: 1, max: 2, default: 1, step: 1, labels: ['1', '2'] },
+      {
+        name: 'Rhythm Type', min: 1, max: 10, default: 3, step: 1,
+        labels: ['Hi-Hat', 'Kick+HH', 'Rock 1', 'Rock 2', 'Pop', 'Funk', 'Shuffle', 'R&B', 'Latin', 'Perc'],
+      },
+      { name: 'Tempo',        min: 40, max: 250, default: 120, step: 1 },
+      { name: 'Memory',       min: 1, max: 99, default: 1, step: 1 },
+      { name: 'Loop FX Type', min: 1, max: 10, default: 1, step: 1 },
+    ],
+    switches: [
+      { name: 'Rhythm',  default: false },
+      { name: 'Loop FX', default: false },
+      { name: 'Phantom', default: false },
+    ],
+  },
+
+  // ─── Joyo ──────────────────────────────────────────────────────────────────
+  'joyo jf-11': {
+    recognized: true,
+    brand: 'Joyo',
+    model: 'JF-11 6 Band EQ',
+    type: 'EQ',
+    // sliders em dB (±18), não knobs
+    knobs: [
+      { name: '100 Hz',  min: -18, max: 18, default: 0, step: 1 },
+      { name: '200 Hz',  min: -18, max: 18, default: 0, step: 1 },
+      { name: '400 Hz',  min: -18, max: 18, default: 0, step: 1 },
+      { name: '800 Hz',  min: -18, max: 18, default: 0, step: 1 },
+      { name: '1.6 kHz', min: -18, max: 18, default: 0, step: 1 },
+      { name: '3.2 kHz', min: -18, max: 18, default: 0, step: 1 },
+    ],
+    switches: [],
+  },
+
+  // ─── Harley Benton ─────────────────────────────────────────────────────────
+  'harley benton american truetone': {
+    recognized: true,
+    brand: 'Harley Benton',
+    model: 'American TrueTone',
+    type: 'overdrive',
+    knobs: [
+      { name: 'Low',   min: 0, max: 10, default: 5 },
+      { name: 'Mid',   min: 0, max: 10, default: 5 },
+      { name: 'High',  min: 0, max: 10, default: 5 },
+      { name: 'Level', min: 0, max: 10, default: 5 },
+      { name: 'Voice', min: 0, max: 10, default: 5 },
+      { name: 'Drive', min: 0, max: 10, default: 4 },
+    ],
+    switches: [],
+  },
+
+  // ─── Mooer ─────────────────────────────────────────────────────────────────
+  'mooer trelicopter': {
+    recognized: true,
+    brand: 'Mooer',
+    model: 'Trelicopter Tremolo',
+    type: 'tremolo',
+    knobs: [
+      { name: 'Speed', min: 0, max: 10, default: 5 },
+      { name: 'Depth', min: 0, max: 10, default: 5 },
+      { name: 'Bias',  min: 0, max: 10, default: 5 },
     ],
     switches: [],
   },
@@ -544,6 +635,26 @@ export const SEED_PEDALS: Record<string, IdentifyPedalResponse> = {
   },
 }
 
+// Nomes alternativos → chave canónica em SEED_PEDALS
+const SEED_ALIASES: Record<string, string> = {
+  "sub'n'up": 'tc electronic sub n up',
+  'tc electronic sub n up mini': 'tc electronic sub n up',
+  'tc electronic flashback': 'tc electronic flashback 2',
+  'flashback 2': 'tc electronic flashback 2',
+  'hall of fame 2': 'tc electronic hall of fame 2',
+  'forcefield': 'tc electronic forcefield',
+  'dark matter': 'tc electronic dark matter',
+  '3rd dimension': 'tc electronic 3rd dimension',
+  'afterglow': 'tc electronic afterglow',
+  'ts9': 'ibanez ts9 tube screamer',
+  'ts808': 'ibanez ts808',
+  'joyo 6 band eq': 'joyo jf-11',
+  'jf-11': 'joyo jf-11',
+  'american truetone': 'harley benton american truetone',
+  'trelicopter': 'mooer trelicopter',
+  'rc-30': 'boss rc-30',
+}
+
 /** Normaliza um nome para comparação tolerante (ignora espaços, hífens, etc.). */
 function normalize(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -556,6 +667,9 @@ const NORMALIZED_INDEX: Record<string, IdentifyPedalResponse> = (() => {
     idx[normalize(key)] = pedal
     // também indexa por "marca + modelo" para tolerar nomes completos
     idx[normalize(`${pedal.brand} ${pedal.model}`)] = pedal
+  }
+  for (const [alias, key] of Object.entries(SEED_ALIASES)) {
+    idx[normalize(alias)] ??= SEED_PEDALS[key]
   }
   return idx
 })()
