@@ -21,9 +21,11 @@ UI text and most code comments are in **Portuguese (pt-PT)** — match that when
 
 "Pedaleira" is a virtual guitar pedalboard. It is **100% local/offline**: no backend, no
 AI calls, no API keys. (Earlier versions called the Anthropic API — that is fully removed;
-don't reintroduce SDK/network dependencies.) The user assembles the pedals they own, can
-**hear** a strum processed through the chain (Web Audio), and gets a song's tone approximated
-via a copy-paste prompt workflow.
+don't reintroduce SDK/network dependencies.) The user assembles the pedals they own, wires them
+with patch cables, sees on each pedal card what that pedal does to the sound, and gets a song's
+tone approximated via a copy-paste prompt workflow. There is currently **no audio playback**
+(a Web Audio "Play" and a combined chain-waveform strip were removed on purpose — the user wants
+to rethink that; don't bring them back unprompted). Domain vocabulary lives in `CONTEXT.md`.
 
 ### State: one Zustand store is the source of truth
 `src/store/usePedalboardStore.ts` holds everything (current setup, saved setups, theme, song
@@ -45,7 +47,7 @@ input jack** (enforced in `connectJacks`).
 `src/utils/chain.ts` is the single source of truth: **`deriveChain(pedals, connections)`** walks
 from `'guitar'` following out→in links (with a visited-set guard) until `'amp'` or a dead end,
 returning the ordered pedals — the chain order is the *wiring* order. Everything that needs the
-chain calls `deriveChain` (`Pedalboard.tsx`, `Sidebar.tsx`, and `play()`/`ChainWaveform`).
+chain calls `deriveChain` (`Pedalboard.tsx`, `Sidebar.tsx`, PNG export).
 `connectedIds` derives the "in chain" set. New pedals start with no cables (disconnected).
 `Pedal.enabled` is retained but is now just a **mirror of "is in the derived chain"**, kept in
 sync by `syncEnabledPedals` after every connection mutation (source of truth = `connections`).
@@ -57,17 +59,14 @@ cable via Pointer Events; drop onto another jack calls `connectJacks`; clicking 
 `x` only cosmetically. `withMigratedConnections` (run in `hydrateSetup` on load/import) rebuilds
 cables from the legacy `enabled`+`x` model for setups saved before this feature.
 
-### Two parallel systems both keyed off `EffectType`
-1. `src/utils/signal.ts` — pure-math DSP for **visualization only** (`applyEffect`,
-   `chainSignal`). Feeds `WaveformViz` (per pedal) and `ChainWaveform` (combined).
-2. `src/audio/engine.ts` — a real **Web Audio node graph** for the Play button. Karplus-Strong
-   synthesizes an E-major strum, then `buildFx` maps each `EffectType` to actual nodes
-   (WaveShaper/Delay/Convolver/LFO/etc.); output runs through an `AnalyserNode` that
-   `ChainWaveform` reads live (turns green + animates while playing).
+### Pedal wave ("Onda do pedal") — keyed off `EffectType`
+`src/utils/signal.ts` is pure-math DSP for **visualization only** (`applyEffect`, `effectAmount`),
+rendered per pedal by `WaveformViz` inside `PedalCard`. Each card shows its pedal **in isolation**
+(clean input → that pedal), never the accumulated chain.
 
 **Adding a new `EffectType` is cross-cutting**: update the union in `src/types/index.ts`, then
-`signal.ts` (`applyEffect`), `audio/engine.ts` (`buildFx`), `PedalCard` `TYPE_LABELS`,
-`WaveformViz` `TYPE_DESC`, `constants/knobInfo.ts`, and `utils/chainWarnings.ts` ordering.
+`signal.ts` (`applyEffect`), `PedalCard` `TYPE_LABELS`, `WaveformViz` `TYPE_DESC`,
+`constants/knobInfo.ts`, and `utils/chainWarnings.ts` ordering.
 
 ### Pedal identification (no AI)
 `src/constants/seedPedals.ts` is a local database keyed by normalized name (hyphen/space/case

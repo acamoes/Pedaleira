@@ -95,15 +95,6 @@ export function effectAmount(pedal: Pedal): number {
   return Math.max(0, Math.min(1, (k.value - k.min) / range))
 }
 
-/** Encadeia o sinal por todos os pedais (na ordem dada). */
-export function chainSignal(orderedPedals: Pedal[]): number[] {
-  let sig = cleanSine()
-  for (const p of orderedPedals) {
-    sig = applyEffect(p.type, sig, effectAmount(p))
-  }
-  return sig
-}
-
 /** Converte um array de amostras [-1,1] num path SVG. */
 export function samplesToPath(values: number[], w: number, h: number): string {
   const mid = h / 2

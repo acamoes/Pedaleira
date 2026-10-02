@@ -7,10 +7,8 @@ import { PedalEditModal } from './PedalEditModal'
 import { GuitarJack } from './GuitarJack'
 import { Amplifier } from './Amplifier'
 import { CableConnections } from './CableConnections'
-import { ChainWaveform } from './ChainWaveform'
 import { SketchButton } from '../ui/SketchButton'
 import { exportChainPng } from '../../utils/exportImage'
-import { useAudioEngine } from '../../hooks/useAudioEngine'
 import { deriveChain, GUITAR_JACK, AMP_JACK, inJackId, outJackId } from '../../utils/chain'
 
 const SNAP = 10  // grelha de snap ao largar (px)
@@ -28,7 +26,6 @@ interface JackDef { id: string; x: number; y: number; kind: 'in' | 'out' }
 
 export function Pedalboard() {
   const { currentSetup, movePedal, connectJacks, disconnectCable, clearConnections } = usePedalboardStore()
-  const { play, isPlaying, analyser } = useAudioEngine()
   const [showAddModal,  setShowAddModal]  = useState(false)
   const [editingPedal,  setEditingPedal]  = useState<Pedal | null>(null)
   const [draggingId,    setDraggingId]    = useState<string | null>(null)
@@ -117,29 +114,11 @@ export function Pedalboard() {
 
   return (
     <div className="flex flex-col gap-3 flex-1 overflow-hidden">
-      {/* ══ A BOARD — peça única: barra de topo + canvas + fita de sinal ══ */}
+      {/* ══ A BOARD — peça única: barra de topo + canvas ══ */}
       <div className="flex flex-col flex-1 border-2 border-ink rounded-[6px] shadow-sketch bg-paper-dark overflow-hidden">
 
-        {/* Barra de topo: Play + breadcrumb + ações */}
+        {/* Barra de topo: breadcrumb + ações */}
         <div className="flex items-center gap-3 px-3 py-2 border-b-2 border-ink bg-paper flex-wrap">
-          <button
-            type="button"
-            onClick={() => play(chainPedals)}
-            title="Tocar um acorde e ouvir o som processado pelos pedais"
-            className="flex items-center gap-2 font-body font-bold border-2 rounded-hand px-4 py-1.5 text-sm
-              shadow-sketch-sm active:translate-y-px active:shadow-none transition-all"
-            style={{
-              backgroundColor: isPlaying ? 'var(--color-live)' : 'var(--color-ink)',
-              color: 'var(--color-paper)',
-              borderColor: isPlaying ? 'var(--color-live)' : 'var(--color-ink)',
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor">
-              {isPlaying ? <rect x="2" y="2" width="10" height="10" rx="1" /> : <path d="M3 2 L12 7 L3 12 Z" />}
-            </svg>
-            {isPlaying ? 'A tocar…' : 'Play'}
-          </button>
-
           <div className="flex-1 min-w-0">
             {chainPedals.length > 0 ? (
               <p className="font-mono text-[11px] text-gray-sketch tracking-wide truncate">
@@ -224,7 +203,7 @@ export function Pedalboard() {
             width={canvasW}
             height={CANVAS_H}
             overflow="visible"
-            style={{ zIndex: 5, pointerEvents: 'none', color: isPlaying ? 'var(--color-live)' : 'var(--color-ink)' }}
+            style={{ zIndex: 5, pointerEvents: 'none', color: 'var(--color-ink)' }}
           >
             <CableConnections
               pedals={currentSetup.pedals}
@@ -263,11 +242,6 @@ export function Pedalboard() {
               </div>
             )
           })}
-        </div>
-
-        {/* Fita de sinal */}
-        <div className="border-t-2 border-ink bg-paper px-3 py-1.5">
-          <ChainWaveform pedals={chainPedals} isPlaying={isPlaying} analyser={analyser} />
         </div>
       </div>
 
