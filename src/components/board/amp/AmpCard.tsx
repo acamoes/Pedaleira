@@ -16,6 +16,8 @@ export const AMP_DIMS: Record<AmpLayout, { w: number; h: number; jackY: number }
   'generic':      { w: 280, h: 220, jackY: 50 },
 }
 export const AMP_HEADER_H = 24   // linha do seletor de amp, por cima do corpo
+/** Caixa "Sem amplificador" (quando o Setup não tem amps). */
+export const NO_AMP_DIMS = { w: 150, h: 130, jackY: 65 }
 
 const LIGHT_TEXT = '#f2ede2'
 const DARK_TEXT = '#1d1c19'
@@ -26,7 +28,7 @@ interface Props {
 }
 
 export function AmpCard({ amp, onAddAmp }: Props) {
-  const { highlightedKnobs, updateAmpKnobValue, updateAmpSwitchValue } = usePedalboardStore()
+  const { highlightedKnobs, updateAmpKnobValue, updateAmpSwitchValue, removeAmp } = usePedalboardStore()
 
   /** Knob do amp pelo nome (null se este amp não o tiver). */
   const K = (name: string, textColor: string) => {
@@ -61,12 +63,38 @@ export function AmpCard({ amp, onAddAmp }: Props) {
   return (
     <div className="flex flex-col select-none" style={{ width: w }}>
       <AmpPicker amp={amp} onAddAmp={onAddAmp} />
-      <div style={{ width: w, height: h }}>{body}</div>
+      <div className="relative" style={{ width: w, height: h }}>
+        {body}
+        {/* × no canto, como nos pedais: remove o amp do Setup */}
+        <button type="button" title="Remover este amp" onClick={() => removeAmp(amp.id)}
+          className="absolute -top-2 -right-2 w-5 h-5 rounded-full border-2 border-ink bg-paper text-ink
+            grid place-items-center shadow-sketch-sm hover:bg-paper-dark z-10">
+          <svg width="8" height="8" viewBox="0 0 10 10">
+            <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
     </div>
   )
 }
 
 type KFn = (name: string, textColor: string) => JSX.Element | null
+
+/** Sem amps no Setup: a cadeia termina numa caixa simples, com o INPUT e "+ Amp". */
+export function NoAmp({ onAddAmp }: { onAddAmp: () => void }) {
+  return (
+    <div className="flex flex-col select-none" style={{ width: NO_AMP_DIMS.w }}>
+      <div style={{ height: AMP_HEADER_H }} />
+      <div className="rounded-[8px] border-2 border-dashed border-ink bg-paper flex flex-col items-center justify-center gap-2 text-ink"
+        style={{ width: NO_AMP_DIMS.w, height: NO_AMP_DIMS.h }}>
+        <span className="font-mono text-[9px] uppercase tracking-wide opacity-70">Sem amplificador</span>
+        <button type="button" onClick={onAddAmp}
+          className="font-body text-[12px] border-[1.5px] border-ink rounded-hand px-2.5 py-0.5 hover:bg-paper-dark">+ Amp</button>
+      </div>
+    </div>
+  )
+}
 
 // ─── Seletor do Amp ativo ────────────────────────────────────────────────────
 
@@ -95,12 +123,10 @@ function AmpPicker({ amp, onAddAmp }: { amp: Amp; onAddAmp: () => void }) {
           <div className="border-t border-gray-light my-1" />
           <button type="button" onClick={() => { setOpen(false); onAddAmp() }}
             className="w-full text-left font-body text-[12px] text-ink px-3 py-1 hover:bg-paper-dark">+ Outro amp…</button>
-          {currentSetup.amps.length > 1 && (
-            <button type="button" onClick={() => { removeAmp(amp.id); setOpen(false) }}
-              className="w-full text-left font-body text-[12px] text-gray-sketch px-3 py-1 hover:bg-paper-dark hover:text-ink">
-              Remover este amp
-            </button>
-          )}
+          <button type="button" onClick={() => { removeAmp(amp.id); setOpen(false) }}
+            className="w-full text-left font-body text-[12px] text-gray-sketch px-3 py-1 hover:bg-paper-dark hover:text-ink">
+            Remover este amp
+          </button>
         </div>
       )}
     </div>

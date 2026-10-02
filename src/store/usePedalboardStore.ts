@@ -69,7 +69,7 @@ function defaultAmps(): Amp[] {
   return DEFAULT_AMP_KEYS.map((key) => ampFromData(key, SEED_AMPS[key]))
 }
 
-/** Amp ativo de um Setup (onde a Cadeia termina). */
+/** Amp ativo de um Setup (onde a Cadeia termina); undefined se o Setup não tiver amps. */
 export function activeAmpOf(setup: PedalboardSetup): Amp | undefined {
   return setup.amps.find((a) => a.id === setup.activeAmpId) ?? setup.amps[0]
 }
@@ -95,7 +95,7 @@ function stripPedalConnections(connections: Connection[], pedalId: string): Conn
   return connections.filter((c) => !io.has(c.from) && !io.has(c.to))
 }
 
-function defaultX(index: number) { return 110 + (index % 4) * 155 }
+function defaultX(index: number) { return 130 + (index % 4) * 155 }   // à direita da caixa da guitarra
 function defaultY() { return Math.floor((CANVAS_H - PEDAL_H) / 2) }   // centrado verticalmente
 
 // Valida/normaliza o valor de um knob: dentro do intervalo e arredondado ao passo
@@ -150,9 +150,10 @@ function migratePedal(p: Pedal, index: number): Pedal {
 function hydrateSetup(raw: PedalboardSetup): PedalboardSetup {
   const withConn = withMigratedConnections(raw)   // usa o enabled+x original
   const pedals = withConn.pedals.map(migratePedal)
-  // Setups anteriores aos amps: recebem os amps por defeito
-  const amps = raw.amps?.length ? raw.amps : defaultAmps()
-  const activeAmpId = amps.some((a) => a.id === raw.activeAmpId) ? raw.activeAmpId : amps[0].id
+  // Setups anteriores aos amps (sem o campo): recebem os amps por defeito.
+  // Uma lista vazia é respeitada — o utilizador apagou-os todos.
+  const amps = raw.amps ?? defaultAmps()
+  const activeAmpId = amps.some((a) => a.id === raw.activeAmpId) ? raw.activeAmpId : (amps[0]?.id ?? '')
   return { ...withConn, amps, activeAmpId, pedals: syncEnabledPedals(pedals, withConn.connections) }
 }
 
@@ -410,8 +411,7 @@ export const usePedalboardStore = create<Store>((set, get) => {
     removeAmp(ampId) {
       set((s) => {
         const amps = s.currentSetup.amps.filter((a) => a.id !== ampId)
-        if (!amps.length) return s   // o Setup tem sempre pelo menos um amp
-        const activeAmpId = s.currentSetup.activeAmpId === ampId ? amps[0].id : s.currentSetup.activeAmpId
+        const activeAmpId = s.currentSetup.activeAmpId === ampId ? (amps[0]?.id ?? '') : s.currentSetup.activeAmpId
         return { currentSetup: { ...s.currentSetup, amps, activeAmpId, updatedAt: Date.now() } }
       })
       persist()
@@ -479,7 +479,7 @@ export const usePedalboardStore = create<Store>((set, get) => {
       const highlights: string[] = []
       set((s) => {
         const rowY = Math.floor((CANVAS_H - PEDAL_H) / 2)
-        const startX = 110
+        const startX = 130
         const spacing = PEDAL_W + 36
         const orderIndex = new Map(orderedIds.map((id, i) => [id, i]))
 

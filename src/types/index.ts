@@ -99,7 +99,7 @@ export interface PedalboardSetup {
   pedals: Pedal[]
   connections: Connection[]   // cadeia montada manualmente (guitarra→…→amp)
   amps: Amp[]                  // amps que o utilizador tem (os 3 dele por defeito)
-  activeAmpId: string          // Amp ativo: onde a Cadeia termina
+  activeAmpId: string          // Amp ativo: onde a Cadeia termina ('' se não houver amps)
   song?: SetupSong             // música para a qual esta board está regulada
   createdAt: number
   updatedAt: number

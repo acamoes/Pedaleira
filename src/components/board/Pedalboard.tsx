@@ -4,8 +4,8 @@ import type { Pedal } from '../../types'
 import { PedalCard } from './PedalCard'
 import { AddPedalModal } from './AddPedalModal'
 import { PedalEditModal } from './PedalEditModal'
-import { GuitarJack } from './GuitarJack'
-import { AmpCard, AMP_DIMS, AMP_HEADER_H } from './amp/AmpCard'
+import { GuitarBox, GUITAR_BOX } from './GuitarBox'
+import { AmpCard, NoAmp, AMP_DIMS, AMP_HEADER_H, NO_AMP_DIMS } from './amp/AmpCard'
 import { AddAmpModal } from './amp/AddAmpModal'
 import { CableConnections } from './CableConnections'
 import { SketchButton } from '../ui/SketchButton'
@@ -15,10 +15,8 @@ import { deriveChain, GUITAR_JACK, AMP_JACK, inJackId, outJackId } from '../../u
 
 const SNAP = 10  // grelha de snap ao largar (px)
 
-// Dimensões dos elementos laterais (devem coincidir com os SVGs)
-const GUITAR_W      = 90   // largura do SVG GuitarJack
-const GUITAR_X      = 8
-const GUITAR_JACK_Y = 200  // y do jack dentro do SVG
+// Margens dos elementos laterais (guitarra à esquerda, amp à direita)
+const GUITAR_X      = 4
 const AMP_MARGIN    = 8
 
 interface Pt { x: number; y: number }
@@ -43,13 +41,13 @@ export function Pedalboard() {
     return () => obs.disconnect()
   }, [])
 
-  const guitarTop = Math.round(CANVAS_H / 2 - GUITAR_JACK_Y)
+  const guitarTop = Math.round(CANVAS_H / 2 - GUITAR_BOX.jackY)   // ficha a meia altura do canvas
   const amp       = activeAmpOf(currentSetup)
-  const ampDims   = AMP_DIMS[amp?.layout ?? 'generic']
+  const ampDims   = amp ? AMP_DIMS[amp.layout] : NO_AMP_DIMS
   const ampTop    = Math.round((CANVAS_H - ampDims.h) / 2)   // topo do corpo do amp
 
   // Posições dos jacks da guitarra e do amp no canvas (em px)
-  const guitarJack: Pt = { x: GUITAR_X + GUITAR_W, y: guitarTop + GUITAR_JACK_Y }
+  const guitarJack: Pt = { x: GUITAR_X + GUITAR_BOX.w, y: guitarTop + GUITAR_BOX.jackY }
   const ampJack:    Pt = { x: canvasW - ampDims.w - AMP_MARGIN, y: ampTop + ampDims.jackY }  // INPUT do painel
 
   // Cadeia ativa = caminho guitarra→…→amp derivado das ligações manuais.
@@ -169,10 +167,12 @@ export function Pedalboard() {
         >
           {/* Guitarra + Amp (ilustração; as fichas interativas vêm depois) */}
           <div className="absolute pointer-events-none" style={{ left: GUITAR_X, top: guitarTop }}>
-            <GuitarJack />
+            <GuitarBox />
           </div>
           <div className="absolute" style={{ right: AMP_MARGIN, top: ampTop - AMP_HEADER_H, zIndex: 12 }}>
-            {amp && <AmpCard amp={amp} onAddAmp={() => setShowAddAmp(true)} />}
+            {amp
+              ? <AmpCard amp={amp} onAddAmp={() => setShowAddAmp(true)} />
+              : <NoAmp onAddAmp={() => setShowAddAmp(true)} />}
           </div>
 
           {/* Estado vazio (só quando não há pedais nenhuns) */}

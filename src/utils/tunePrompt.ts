@@ -22,25 +22,35 @@ function describeUnit(u: { brand: string; model: string; knobs: Knob[]; switches
  */
 export function buildTunePrompt(pedals: Pedal[], amps: Amp[], song: string, artist: string): string {
   const list = pedals.map((p) => describeUnit(p, ` (${p.type})`)).join('\n') || '- (nenhum pedal)'
-  const ampList = amps.map((a) => describeUnit(a)).join('\n')
-
   const artistPart = artist.trim() ? ` dos/de "${artist.trim()}"` : ''
+  const hasAmps = amps.length > 0
+
+  // Sem amps no Setup, a pergunta fica só com os pedais
+  const ampSection = hasAmps
+    ? `\nE estes AMPLIFICADORES (só uso um de cada vez):\n${amps.map((a) => describeUnit(a)).join('\n')}\n`
+    : ''
+  const steps = hasAmps
+    ? [
+        'ESCOLHE apenas os pedais RELEVANTES para esta música — ignora os que não fazem sentido (não tens de usar todos).',
+        'ESCOLHE o AMPLIFICADOR mais adequado (só um), tendo em conta os seus canais e efeitos internos.',
+        'Indica a ORDEM da cadeia com os escolhidos, a terminar no amplificador (ex.: Guitarra -> Pedal A -> Pedal B -> Amplificador X).',
+        'Dá a CONFIGURAÇÃO de cada pedal escolhido e do amplificador numa tabela, uma linha por equipamento, com o valor de cada knob na ordem em que os listei (0-10, salvo indicação entre parênteses) e o estado de cada switch (on/off).',
+      ]
+    : [
+        'ESCOLHE apenas os pedais RELEVANTES para esta música — ignora os que não fazem sentido (não tens de usar todos).',
+        'Indica a ORDEM da cadeia com os escolhidos (ex.: Guitarra -> Pedal A -> Pedal B -> Amplificador).',
+        'Dá a CONFIGURAÇÃO de cada pedal escolhido numa tabela, uma linha por pedal, com o valor de cada knob na ordem em que os listei (0-10, salvo indicação entre parênteses) e o estado de cada switch (on/off).',
+      ]
 
   return `Tenho em casa este INVENTÁRIO de pedais de guitarra:
 ${list}
-
-E estes AMPLIFICADORES (só uso um de cada vez):
-${ampList}
-
+${ampSection}
 Quero aproximar-me o mais possível do som da guitarra na música "${song.trim()}"${artistPart}.
 
-A partir do inventário acima (não posso adicionar outros pedais nem amplificadores):
-1. ESCOLHE apenas os pedais RELEVANTES para esta música — ignora os que não fazem sentido (não tens de usar todos).
-2. ESCOLHE o AMPLIFICADOR mais adequado (só um), tendo em conta os seus canais e efeitos internos.
-3. Indica a ORDEM da cadeia com os escolhidos, a terminar no amplificador (ex.: Guitarra -> Pedal A -> Pedal B -> Amplificador X).
-4. Dá a CONFIGURAÇÃO de cada pedal escolhido e do amplificador numa tabela, uma linha por equipamento, com o valor de cada knob na ordem em que os listei (0-10, salvo indicação entre parênteses) e o estado de cada switch (on/off).
+A partir do inventário acima (não posso adicionar outros ${hasAmps ? 'pedais nem amplificadores' : 'pedais'}):
+${steps.map((t, i) => `${i + 1}. ${t}`).join('\n')}
 
-Procura a combinação mais parecida possível com o tom original, mesmo que aproximada. Os pedais que não escolheres ficam de fora (em casa). Quero que me dês uma resposta seguindo exatamente este formato e mais nada: Pedal X1 - Configuração Y1, Pedal X2 - Configuração Y2, etc..., Amplificador - Configuração`
+Procura a combinação mais parecida possível com o tom original, mesmo que aproximada. Os pedais que não escolheres ficam de fora (em casa). Quero que me dês uma resposta seguindo exatamente este formato e mais nada: Pedal X1 - Configuração Y1, Pedal X2 - Configuração Y2, etc...${hasAmps ? ', Amplificador - Configuração' : ''}`
 }
 
 // ─── B) Interpretar a resposta colada ────────────────────────────────────────

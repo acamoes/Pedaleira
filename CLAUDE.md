@@ -62,8 +62,9 @@ cables from the legacy `enabled`+`x` model for setups saved before this feature.
 ### Amplifiers ("Amplificador" / "Amp ativo")
 `PedalboardSetup.amps` is the user's amp inventory (seeded with their Fender Frontman 10G, Boss
 Katana-Mini and Yamaha THR5 via `constants/seedAmps.ts`; `hydrateSetup` backfills them into older
-setups) and `activeAmpId` is the one the chain ends in — the `'amp'` jack always means the active
-amp (`activeAmpOf`). Amps have knobs/switches like pedals but no `EffectType` and no wave.
+setups that lack the field — an empty list is kept, the user may delete every amp) and
+`activeAmpId` is the one the chain ends in (`''` when there are none) — the `'amp'` jack always
+means the active amp (`activeAmpOf`), or the "Sem amplificador" box (`NoAmp`) when there is none. Amps have knobs/switches like pedals but no `EffectType` and no wave.
 `components/board/amp/AmpCard.tsx` draws each `AmpLayout` faithfully to the real panel (control
 order, colours) and exports `AMP_DIMS` — `Pedalboard.tsx` derives the amp jack from `w`/`jackY`,
 so changing a layout's panel height means updating `jackY`. Unknown models become a `generic` amp.
@@ -100,8 +101,9 @@ and detects bypass. It returns a `TunePedalsResponse` + ordered ids consumed by
 Hand-drawn black/white "sketch" look. Theming uses CSS custom properties in `src/index.css`
 (`--color-ink`, `--color-paper`, ...); `tailwind.config.ts` colors reference those vars and dark
 mode swaps them via the `.dark` class on `<html>` (toggled in `App.tsx` from store `theme`).
-SVG illustrations (`GuitarJack`, `PedalCard`) use `currentColor` +
+SVG illustrations (`PedalCard`, knobs) use `currentColor` +
 `var(--color-*)` so they theme automatically — avoid hardcoded hex in SVGs (exceptions: pedal body
-colours and the amp layouts, which copy real hardware colours). The guitar jack position in
-`Pedalboard.tsx` is tuned to the SVG viewBox coordinates; changing the SVG means re-checking it. When editing complex SVG illustrations, render to PNG and look at the
+colours and the amp layouts, which copy real hardware colours). The guitar is a fixed CC0
+Stratocaster illustration (`src/assets/stratocaster.svg`, cleaned from Open Clip Art) inside
+`GuitarBox`; its output jack comes from `GUITAR_BOX.jackY`, not from the drawing. When editing complex SVG illustrations, render to PNG and look at the
 result rather than guessing bezier coordinates.

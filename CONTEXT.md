@@ -13,6 +13,10 @@ _Avoid_: efeito (quando se fala do objeto), unidade
 Ligação entre a saída de uma tomada e a entrada de outra (guitarra, pedal ou amplificador).
 _Avoid_: ligação, patch
 
+**Guitarra**:
+A fonte do som, onde a Cadeia começa. Por agora é sempre uma Stratocaster fixa, sem regulações.
+_Avoid_: instrumento, input
+
 **Cadeia**:
 A sequência ordenada de pedais pela qual o som passa, da guitarra ao Amp ativo, dada pelos cabos.
 _Avoid_: chain, sinal
@@ -22,7 +26,7 @@ Um amplificador que o utilizador possui, com os controlos do painel real (knobs,
 _Avoid_: coluna, combo, cabeça
 
 **Amp ativo**:
-O único Amplificador do Setup onde a Cadeia termina; os outros amps do Setup ficam guardados com as suas regulações.
+O único Amplificador do Setup onde a Cadeia termina; os outros amps do Setup ficam guardados com as suas regulações. Um Setup pode não ter amps — a Cadeia termina então sem Amp ativo.
 _Avoid_: amp ligado, saída
 
 **Setup**:
