@@ -4,7 +4,6 @@ import { SwitchToggle } from './SwitchToggle'
 import { WaveformViz } from './WaveformViz'
 import { usePedalboardStore } from '../../store/usePedalboardStore'
 import { knobInfo } from '../../constants/knobInfo'
-import { effectAmount } from '../../utils/signal'
 
 interface Props {
   pedal: Pedal
@@ -94,11 +93,7 @@ export function PedalCard({ pedal, connected, isDragging = false, onEdit, onDrag
 
       {/* ── Forma de onda: o que o pedal faz ao sinal ── */}
       <div className="px-2 pt-1.5 pb-1 border-b border-current/15">
-        <WaveformViz
-          type={connected ? pedal.type : 'tuner'}
-          color={textColor}
-          amount={effectAmount(pedal)}
-        />
+        <WaveformViz pedal={pedal} color={textColor} />
       </div>
 
       {/* ── Knobs ── */}

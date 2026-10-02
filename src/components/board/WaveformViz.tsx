@@ -1,11 +1,10 @@
 import { useMemo } from 'react'
-import type { EffectType } from '../../types'
-import { cleanSine, applyEffect, samplesToPath } from '../../utils/signal'
+import type { Pedal } from '../../types'
+import { pedalWave, samplesToPath, selectorLabel } from '../../utils/signal'
 
 interface Props {
-  type: EffectType
+  pedal: Pedal
   color?: string
-  amount?: number
 }
 
 const TYPE_DESC: Record<string, string> = {
@@ -16,26 +15,35 @@ const TYPE_DESC: Record<string, string> = {
   tuner: 'clean', unknown: 'signal',
 }
 
-export function WaveformViz({ type, color = 'currentColor', amount = 0.5 }: Props) {
-  const W = 96
-  const H = 26
-  const { inputPath, outputPath } = useMemo(() => {
-    const input = cleanSine()
-    return {
-      inputPath: samplesToPath(input, W, H),
-      outputPath: samplesToPath(applyEffect(type, input, amount), W, H),
+const W = 96
+const H = 26
+
+/** Onda do pedal: o que este pedal faz, isoladamente, a uma nota limpa (ver utils/signal). */
+export function WaveformViz({ pedal, color = 'currentColor' }: Props) {
+  const { refPath, outPath } = useMemo(() => {
+    const wave = pedalWave(pedal)
+    if (wave.kind === 'freq') {
+      // curva em dB; a referência é a linha plana dos 0 dB
+      const toY = (db: number) => db / wave.rangeDb
+      return {
+        refPath: `M 0 ${H / 2} L ${W} ${H / 2}`,
+        outPath: samplesToPath(wave.output.map((db) => Math.max(-1, Math.min(1, toY(db)))), W, H),
+      }
     }
-  }, [type, amount])
+    return { refPath: samplesToPath(wave.input, W, H), outPath: samplesToPath(wave.output, W, H) }
+  }, [pedal])
+
+  const label = selectorLabel(pedal) ?? TYPE_DESC[pedal.type] ?? 'signal'
 
   return (
     <div className="flex flex-col items-center gap-0.5 w-full">
       <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ color }}>
         <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke="currentColor" strokeWidth="0.4" opacity="0.2" />
-        <path d={inputPath} fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.25" />
-        <path d={outputPath} fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={refPath} fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.25" />
+        <path d={outPath} fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" strokeLinecap="round" />
       </svg>
       <span className="font-body text-[7px] uppercase tracking-wide opacity-50 leading-none">
-        {TYPE_DESC[type] ?? 'signal'}
+        {label}
       </span>
     </div>
   )
