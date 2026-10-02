@@ -4,6 +4,7 @@ import { SwitchToggle } from './SwitchToggle'
 import { WaveformViz } from './WaveformViz'
 import { usePedalboardStore } from '../../store/usePedalboardStore'
 import { knobInfo } from '../../constants/knobInfo'
+import { TYPE_LABELS } from '../../constants/typeLabels'
 
 interface Props {
   pedal: Pedal
@@ -13,13 +14,6 @@ interface Props {
   onDragHandleMouseDown: (e: React.MouseEvent) => void
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  overdrive: 'OD', distortion: 'DIST', fuzz: 'FUZZ',
-  delay: 'DELAY', reverb: 'REVERB', chorus: 'CHORUS',
-  flanger: 'FLANG', phaser: 'PHASE', tremolo: 'TREM',
-  compressor: 'COMP', octaver: 'OCT', wah: 'WAH', EQ: 'EQ',
-  boost: 'BOOST', looper: 'LOOP', tuner: 'TUNE', unknown: '???',
-}
 
 // Determina se o fundo é escuro para ajustar a cor do texto
 function isDarkBg(hex: string): boolean {
