@@ -1,7 +1,8 @@
 import { createPortal } from 'react-dom'
-import type { Knob, Pedal, PedalSwitch, SetupSong, TuneResult } from '../../types'
+import type { Amp, Knob, Pedal, PedalSwitch, SetupSong, TuneResult } from '../../types'
 import { bandFreq } from '../../utils/signal'
 import { formatSong } from '../board/SongTitle'
+import { knobDisplay } from '../../utils/knobDisplay'
 
 // ─── Ficha de regulação ──────────────────────────────────────────────────────
 // Folha imprimível (A4 horizontal, preto e branco) da Cadeia ativa: cada pedal por
@@ -10,6 +11,7 @@ import { formatSong } from '../board/SongTitle'
 
 interface Props {
   chain: Pedal[]
+  amp?: Amp
   setupName: string
   song?: SetupSong
   tune: TuneResult | null
@@ -27,20 +29,22 @@ function controlKind(k: Knob): 'knob' | 'slider' | 'number' {
 function KnobDrawing({ knob }: { knob: Knob }) {
   const frac = (knob.value - knob.min) / (knob.max - knob.min || 1)
   const a = ((-135 + frac * 270) * Math.PI) / 180
-  const tick = (deg: number) => {
+  const tick = (deg: number, key: string | number) => {
     const r = (deg * Math.PI) / 180
-    return <line x1={22 + 17 * Math.sin(r)} y1={22 - 17 * Math.cos(r)} x2={22 + 20 * Math.sin(r)} y2={22 - 20 * Math.cos(r)} stroke="#000" strokeWidth="1.2" />
+    return <line key={key} x1={22 + 17 * Math.sin(r)} y1={22 - 17 * Math.cos(r)} x2={22 + 20 * Math.sin(r)} y2={22 - 20 * Math.cos(r)} stroke="#000" strokeWidth="1.2" />
   }
-  const label = knob.labels?.[Math.round(knob.value - knob.min)]
+  // knobs de zonas (THR5): marca também as fronteiras entre zonas
+  const zoneDegs = (knob.zones ?? []).slice(1).map((_, i) => -135 + (((i + 1) * 10 - knob.min) / (knob.max - knob.min)) * 270)
   return (
     <div className="sheet-control">
       <span className="sheet-control-name">{knob.name}</span>
       <svg width="44" height="44" viewBox="0 0 44 44">
-        {tick(-135)}{tick(0)}{tick(135)}
+        {tick(-135, 'a')}{tick(0, 'b')}{tick(135, 'c')}
+        {zoneDegs.map((d, i) => tick(d, i))}
         <circle cx="22" cy="22" r="14" fill="#fff" stroke="#000" strokeWidth="1.6" />
         <line x1="22" y1="22" x2={22 + 12 * Math.sin(a)} y2={22 - 12 * Math.cos(a)} stroke="#000" strokeWidth="2.6" strokeLinecap="round" />
       </svg>
-      <span className="sheet-control-value">{label ?? fmt(knob.value)}</span>
+      <span className="sheet-control-value">{knobDisplay(knob)}</span>
     </div>
   )
 }
@@ -82,11 +86,14 @@ function SwitchDrawing({ sw }: { sw: PedalSwitch }) {
   )
 }
 
-function PedalSheet({ pedal, index }: { pedal: Pedal; index: number }) {
+/** O que se desenha num cartão da folha: um pedal ou o amp. */
+interface SheetUnit { brand: string; model: string; knobs: Knob[]; switches: PedalSwitch[]; color?: string }
+
+function PedalSheet({ pedal, badge }: { pedal: SheetUnit; badge: string }) {
   return (
     <div className="sheet-pedal" style={{ borderTopColor: pedal.color || '#000' }}>
       <div className="sheet-pedal-head">
-        <span className="sheet-pedal-index">{index + 1}</span>
+        <span className="sheet-pedal-index">{badge}</span>
         <div>
           <div className="sheet-pedal-brand">{pedal.brand}</div>
           <div className="sheet-pedal-model">{pedal.model}</div>
@@ -114,7 +121,7 @@ function PedalSheet({ pedal, index }: { pedal: Pedal; index: number }) {
   )
 }
 
-export function SettingsSheet({ chain, setupName, song, tune }: Props) {
+export function SettingsSheet({ chain, amp, setupName, song, tune }: Props) {
   const date = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })
   const notes = tune?.response.notes?.trim()
 
@@ -134,11 +141,13 @@ export function SettingsSheet({ chain, setupName, song, tune }: Props) {
         {chain.map((p, i) => (
           <div key={p.id} className="sheet-step">
             <span className="sheet-arrow">→</span>
-            <PedalSheet pedal={p} index={i} />
+            <PedalSheet pedal={p} badge={String(i + 1)} />
           </div>
         ))}
-        <span className="sheet-arrow">→</span>
-        <span className="sheet-endpoint">Amp</span>
+        <div className="sheet-step">
+          <span className="sheet-arrow">→</span>
+          {amp ? <PedalSheet pedal={amp} badge="Amp" /> : <span className="sheet-endpoint">Amp</span>}
+        </div>
       </div>
 
       {notes && (

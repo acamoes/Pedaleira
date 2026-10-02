@@ -4,6 +4,7 @@ import { SketchButton } from '../ui/SketchButton'
 import { usePedalboardStore } from '../../store/usePedalboardStore'
 import { buildTunePrompt, parseTuneAnswer } from '../../utils/tunePrompt'
 import type { ParsedTune } from '../../utils/tunePrompt'
+import { knobDisplay } from '../../utils/knobDisplay'
 
 export function TuneForm() {
   const [song, setSong] = useState('')
@@ -20,14 +21,17 @@ export function TuneForm() {
     songHistory, loadFromHistory, clearHistory,
   } = usePedalboardStore()
 
-  const noPedals = currentSetup.pedals.length === 0
+  const noPedals = currentSetup.pedals.length === 0 && currentSetup.amps.length === 0
   const pedalById = (id: string) => currentSetup.pedals.find((p) => p.id === id)
+  const previewAmp = preview?.response.amp
+    ? currentSetup.amps.find((a) => a.id === preview.response.amp!.ampId)
+    : undefined
 
   function handleGenerate() {
     setError(''); setStatus(''); setPreview(null)
     if (!song.trim()) { setError('Escreve o nome da música.'); return }
     if (noPedals) { setError('Adiciona pedais à board primeiro.'); return }
-    setPrompt(buildTunePrompt(currentSetup.pedals, song, artist))
+    setPrompt(buildTunePrompt(currentSetup.pedals, currentSetup.amps, song, artist))
     setCopied(false)
   }
 
@@ -40,9 +44,9 @@ export function TuneForm() {
   function handlePreview() {
     setError(''); setStatus('')
     if (!answer.trim()) { setError('Cola a resposta primeiro.'); return }
-    const parsed = parseTuneAnswer(answer, currentSetup.pedals, song, artist)
+    const parsed = parseTuneAnswer(answer, currentSetup.pedals, currentSetup.amps, song, artist)
     if (parsed.matchedCount === 0) {
-      setError('Não consegui identificar nenhum dos teus pedais na resposta. Confirma que os nomes coincidem.')
+      setError('Não consegui identificar nenhum dos teus pedais ou amps na resposta. Confirma que os nomes coincidem.')
       setPreview(null)
       return
     }
@@ -53,7 +57,8 @@ export function TuneForm() {
   function handleConfirm() {
     if (!preview) return
     applyParsedTune(preview.response, preview.orderedIds)
-    let msg = `${preview.matchedCount} pedal(is) configurado(s) e ligado(s) pela ordem indicada.`
+    let msg = `${preview.orderedIds.length} pedal(is) configurado(s) e ligado(s) pela ordem indicada.`
+    if (previewAmp) msg += ` Amp: ${previewAmp.model}.`
     if (preview.unmatched.length) msg += ` Não encontrados: ${preview.unmatched.join(', ')}.`
     setStatus(msg)
     setPreview(null)
@@ -137,7 +142,7 @@ export function TuneForm() {
         <div className="border-2 border-ink rounded-[6px] bg-paper-dark p-2.5 flex flex-col gap-1.5 shadow-sketch-sm">
           <p className="font-body text-[13px] font-bold text-accent">Vou aplicar isto:</p>
           <p className="font-body text-[11px] text-ink">
-            <strong>Ordem:</strong> Guitarra → {preview.orderedIds.map((id) => pedalById(id)?.model ?? '?').join(' → ')} → Amp
+            <strong>Ordem:</strong> Guitarra → {preview.orderedIds.map((id) => pedalById(id)?.model ?? '?').join(' → ')} → {previewAmp?.model ?? 'Amp (sem alteração)'}
           </p>
           <div className="flex flex-col gap-0.5">
             {preview.orderedIds.map((id) => {
@@ -152,6 +157,16 @@ export function TuneForm() {
               )
             })}
           </div>
+          {previewAmp && preview.response.amp && (
+            <p className="font-body text-[10px] text-ink">
+              <strong>{previewAmp.model}:</strong>{' '}
+              {previewAmp.knobs
+                .filter((k) => preview.response.amp!.knobs[k.name] !== undefined)
+                .map((k) => `${k.name} ${knobDisplay({ ...k, value: preview.response.amp!.knobs[k.name] })}`)
+                .concat(Object.entries(preview.response.amp.switches ?? {}).map(([n, v]) => `${n} ${v ? 'on' : 'off'}`))
+                .join(', ') || '(sem valores detetados)'}
+            </p>
+          )}
           {preview.unmatched.length > 0 && (
             <p className="font-body text-[10px] text-gray-sketch">
               Ficam desligados: {preview.unmatched.join(', ')}

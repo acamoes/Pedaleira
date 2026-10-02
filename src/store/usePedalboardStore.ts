@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import type {
+  Amp,
+  AmpData,
   Knob,
   Pedal,
   PedalboardSetup,
@@ -21,6 +23,7 @@ import {
   isOutputJack, isInputJack, jackPedalId,
   connectedIds, withMigratedConnections,
 } from '../utils/chain'
+import { SEED_AMPS, DEFAULT_AMP_KEYS } from '../constants/seedAmps'
 
 // Canvas constants (shared with Pedalboard)
 export const CANVAS_H = 420
@@ -49,8 +52,35 @@ function loadHistory(): SongHistoryEntry[] {
   }
 }
 
+function ampFromData(modelName: string, data: AmpData): Amp {
+  return {
+    id: uuidv4(),
+    modelName,
+    brand: data.brand,
+    model: data.model,
+    layout: data.layout,
+    knobs: data.knobs.map((k) => ({ ...k, value: k.default })),
+    switches: data.switches.map((s) => ({ ...s, value: s.default })),
+  }
+}
+
+/** Os amps do utilizador (Frontman 10G, Katana-Mini, THR5), com regulações de origem. */
+function defaultAmps(): Amp[] {
+  return DEFAULT_AMP_KEYS.map((key) => ampFromData(key, SEED_AMPS[key]))
+}
+
+/** Amp ativo de um Setup (onde a Cadeia termina). */
+export function activeAmpOf(setup: PedalboardSetup): Amp | undefined {
+  return setup.amps.find((a) => a.id === setup.activeAmpId) ?? setup.amps[0]
+}
+
 function makeEmptySetup(): PedalboardSetup {
-  return { id: uuidv4(), name: 'Novo Setup', pedals: [], connections: [], createdAt: Date.now(), updatedAt: Date.now() }
+  const amps = defaultAmps()
+  return {
+    id: uuidv4(), name: 'Novo Setup', pedals: [], connections: [],
+    amps, activeAmpId: amps[0].id,
+    createdAt: Date.now(), updatedAt: Date.now(),
+  }
 }
 
 // `Pedal.enabled` é um espelho de "está na cadeia ativa" (fonte de verdade = connections).
@@ -120,7 +150,15 @@ function migratePedal(p: Pedal, index: number): Pedal {
 function hydrateSetup(raw: PedalboardSetup): PedalboardSetup {
   const withConn = withMigratedConnections(raw)   // usa o enabled+x original
   const pedals = withConn.pedals.map(migratePedal)
-  return { ...withConn, pedals: syncEnabledPedals(pedals, withConn.connections) }
+  // Setups anteriores aos amps: recebem os amps por defeito
+  const amps = raw.amps?.length ? raw.amps : defaultAmps()
+  const activeAmpId = amps.some((a) => a.id === raw.activeAmpId) ? raw.activeAmpId : amps[0].id
+  return { ...withConn, amps, activeAmpId, pedals: syncEnabledPedals(pedals, withConn.connections) }
+}
+
+/** Aplica `fn` ao amp `ampId` do setup. */
+function mapAmp(setup: PedalboardSetup, ampId: string, fn: (a: Amp) => Amp): PedalboardSetup {
+  return { ...setup, amps: setup.amps.map((a) => (a.id === ampId ? fn(a) : a)), updatedAt: Date.now() }
 }
 
 interface Store {
@@ -131,7 +169,7 @@ interface Store {
   savedSetups: PedalboardSetup[]
   tuneResult: TuneResult | null
   songHistory: SongHistoryEntry[]
-  highlightedKnobs: string[]   // chaves `${pedalId}:${knobName}` recém-alteradas
+  highlightedKnobs: string[]   // chaves `${pedalId|ampId}:${knobName}` recém-alteradas
   isIdentifying: boolean
 
   addPedal: (modelName: string, data: IdentifyPedalResponse) => void
@@ -145,6 +183,11 @@ interface Store {
   clearConnections: () => void
   updateKnobValue: (pedalId: string, knobName: string, value: number) => void
   updateSwitchValue: (pedalId: string, switchName: string, value: boolean) => void
+  addAmp: (modelName: string, data: AmpData) => void
+  removeAmp: (ampId: string) => void
+  setActiveAmp: (ampId: string) => void
+  updateAmpKnobValue: (ampId: string, knobName: string, value: number) => void
+  updateAmpSwitchValue: (ampId: string, switchName: string, value: boolean) => void
   importSetup: (setup: PedalboardSetup) => void
   loadFromHistory: (entry: SongHistoryEntry) => void
   clearHistory: () => void
@@ -356,6 +399,47 @@ export const usePedalboardStore = create<Store>((set, get) => {
       persist()
     },
 
+    addAmp(modelName, data) {
+      const amp = ampFromData(modelName, data)
+      set((s) => ({
+        currentSetup: { ...s.currentSetup, amps: [...s.currentSetup.amps, amp], activeAmpId: amp.id, updatedAt: Date.now() },
+      }))
+      persist()
+    },
+
+    removeAmp(ampId) {
+      set((s) => {
+        const amps = s.currentSetup.amps.filter((a) => a.id !== ampId)
+        if (!amps.length) return s   // o Setup tem sempre pelo menos um amp
+        const activeAmpId = s.currentSetup.activeAmpId === ampId ? amps[0].id : s.currentSetup.activeAmpId
+        return { currentSetup: { ...s.currentSetup, amps, activeAmpId, updatedAt: Date.now() } }
+      })
+      persist()
+    },
+
+    setActiveAmp(ampId) {
+      set((s) => ({ currentSetup: { ...s.currentSetup, activeAmpId: ampId, updatedAt: Date.now() } }))
+      persist()
+    },
+
+    updateAmpKnobValue(ampId, knobName, value) {
+      set((s) => ({
+        currentSetup: mapAmp(s.currentSetup, ampId, (a) => ({
+          ...a, knobs: a.knobs.map((k) => (k.name === knobName ? { ...k, value: clampKnob(value, k) } : k)),
+        })),
+      }))
+      persist()
+    },
+
+    updateAmpSwitchValue(ampId, switchName, value) {
+      set((s) => ({
+        currentSetup: mapAmp(s.currentSetup, ampId, (a) => ({
+          ...a, switches: a.switches.map((sw) => (sw.name === switchName ? { ...sw, value } : sw)),
+        })),
+      }))
+      persist()
+    },
+
     renameCurrentSetup(name) {
       set((s) => ({ currentSetup: { ...s.currentSetup, name, updatedAt: Date.now() } }))
       persist()
@@ -441,11 +525,38 @@ export const usePedalboardStore = create<Store>((set, get) => {
         }
         if (wired.length) connections.push({ from: prev, to: AMP_JACK })
 
+        // Amp escolhido: passa a ser o Amp ativo, com a regulação da resposta
+        const ampSetting = response.amp
+        const amps = ampSetting
+          ? s.currentSetup.amps.map((a) => {
+              if (a.id !== ampSetting.ampId) return a
+              return {
+                ...a,
+                knobs: a.knobs.map((k) => {
+                  const v = ampSetting.knobs[k.name]
+                  if (v === undefined) return k
+                  const nv = clampKnob(v, k)
+                  if (nv !== k.value) highlights.push(`${a.id}:${k.name}`)
+                  return { ...k, value: nv }
+                }),
+                switches: a.switches.map((sw) => {
+                  const v = ampSetting.switches?.[sw.name]
+                  return v !== undefined ? { ...sw, value: v } : sw
+                }),
+              }
+            })
+          : s.currentSetup.amps
+        const activeAmpId = ampSetting && amps.some((a) => a.id === ampSetting.ampId)
+          ? ampSetting.ampId
+          : s.currentSetup.activeAmpId
+
         return {
           currentSetup: {
             ...s.currentSetup,
             pedals: syncEnabledPedals(updatedPedals, connections),
             connections,
+            amps,
+            activeAmpId,
             // a afinação aplicada define a Música da board (se a resposta a trouxer)
             song: response.song?.trim()
               ? { artist: response.artist?.trim() ?? '', title: response.song.trim() }

@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { usePedalboardStore, CANVAS_H, PEDAL_W, PEDAL_H } from '../../store/usePedalboardStore'
+import { usePedalboardStore, activeAmpOf, CANVAS_H, PEDAL_W, PEDAL_H } from '../../store/usePedalboardStore'
 import type { Pedal } from '../../types'
 import { PedalCard } from './PedalCard'
 import { AddPedalModal } from './AddPedalModal'
 import { PedalEditModal } from './PedalEditModal'
 import { GuitarJack } from './GuitarJack'
-import { Amplifier } from './Amplifier'
+import { AmpCard, AMP_DIMS, AMP_HEADER_H } from './amp/AmpCard'
+import { AddAmpModal } from './amp/AddAmpModal'
 import { CableConnections } from './CableConnections'
 import { SketchButton } from '../ui/SketchButton'
 import { SettingsSheet } from '../print/SettingsSheet'
@@ -18,8 +19,6 @@ const SNAP = 10  // grelha de snap ao largar (px)
 const GUITAR_W      = 90   // largura do SVG GuitarJack
 const GUITAR_X      = 8
 const GUITAR_JACK_Y = 200  // y do jack dentro do SVG
-const AMP_W         = 88
-const AMP_H         = 190
 const AMP_MARGIN    = 8
 
 interface Pt { x: number; y: number }
@@ -28,6 +27,7 @@ interface JackDef { id: string; x: number; y: number; kind: 'in' | 'out' }
 export function Pedalboard() {
   const { currentSetup, tuneResult, movePedal, connectJacks, disconnectCable, clearConnections } = usePedalboardStore()
   const [showAddModal,  setShowAddModal]  = useState(false)
+  const [showAddAmp,    setShowAddAmp]    = useState(false)
   const [editingPedal,  setEditingPedal]  = useState<Pedal | null>(null)
   const [draggingId,    setDraggingId]    = useState<string | null>(null)
   const [canvasW,       setCanvasW]       = useState(800)
@@ -44,11 +44,13 @@ export function Pedalboard() {
   }, [])
 
   const guitarTop = Math.round(CANVAS_H / 2 - GUITAR_JACK_Y)
-  const ampTop    = Math.round((CANVAS_H - AMP_H) / 2)
+  const amp       = activeAmpOf(currentSetup)
+  const ampDims   = AMP_DIMS[amp?.layout ?? 'generic']
+  const ampTop    = Math.round((CANVAS_H - ampDims.h) / 2)   // topo do corpo do amp
 
   // Posições dos jacks da guitarra e do amp no canvas (em px)
   const guitarJack: Pt = { x: GUITAR_X + GUITAR_W, y: guitarTop + GUITAR_JACK_Y }
-  const ampJack:    Pt = { x: canvasW - AMP_W - AMP_MARGIN, y: ampTop + 95 }  // 95 = y do jack no Amplifier
+  const ampJack:    Pt = { x: canvasW - ampDims.w - AMP_MARGIN, y: ampTop + ampDims.jackY }  // INPUT do painel
 
   // Cadeia ativa = caminho guitarra→…→amp derivado das ligações manuais.
   const chainPedals = deriveChain(currentSetup.pedals, currentSetup.connections)
@@ -126,7 +128,7 @@ export function Pedalboard() {
           <div className="flex-1 min-w-0">
             {chainPedals.length > 0 ? (
               <p className="font-mono text-[11px] text-gray-sketch tracking-wide truncate">
-                Guitarra&nbsp; →&nbsp; <span className="text-ink">{chainNames}</span>&nbsp; →&nbsp; Amp
+                Guitarra&nbsp; →&nbsp; <span className="text-ink">{chainNames}</span>&nbsp; →&nbsp; {amp?.model ?? "Amp"}
               </p>
             ) : (
               <p className="font-mono text-[11px] text-gray-sketch tracking-wide truncate">
@@ -169,8 +171,8 @@ export function Pedalboard() {
           <div className="absolute pointer-events-none" style={{ left: GUITAR_X, top: guitarTop }}>
             <GuitarJack />
           </div>
-          <div className="absolute pointer-events-none" style={{ right: AMP_MARGIN, top: ampTop }}>
-            <Amplifier />
+          <div className="absolute" style={{ right: AMP_MARGIN, top: ampTop - AMP_HEADER_H, zIndex: 12 }}>
+            {amp && <AmpCard amp={amp} onAddAmp={() => setShowAddAmp(true)} />}
           </div>
 
           {/* Estado vazio (só quando não há pedais nenhuns) */}
@@ -250,9 +252,10 @@ export function Pedalboard() {
         </div>
       </div>
 
-      <SettingsSheet chain={chainPedals} setupName={currentSetup.name} song={currentSetup.song} tune={tuneResult} />
+      <SettingsSheet chain={chainPedals} amp={amp} setupName={currentSetup.name} song={currentSetup.song} tune={tuneResult} />
 
       {showAddModal && <AddPedalModal onClose={() => setShowAddModal(false)} />}
+      {showAddAmp && <AddAmpModal onClose={() => setShowAddAmp(false)} />}
       {editingPedal && (
         <PedalEditModal pedal={editingPedal} onClose={() => setEditingPedal(null)} />
       )}

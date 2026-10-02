@@ -8,6 +8,9 @@ export interface Knob {
   value: number
   step?: number      // passo discreto (ex.: 1 para seletores); omisso = contínuo (0.1)
   labels?: string[]  // nomes das posições de um seletor (labels[value - min])
+  // Knob "de zonas" (ex.: Effect do THR5): cada zona ocupa 10 unidades, 0 = desligado.
+  // value 16 com zones [Chorus, Flanger…] = Flanger com intensidade 6. max = zones.length * 10.
+  zones?: string[]
 }
 
 export interface PedalSwitch {
@@ -64,6 +67,30 @@ export interface Connection {
   to: string     // ficha de entrada: 'amp' | '<pedalId>:in'
 }
 
+// ─── Amplificador ────────────────────────────────────────────────────────────
+
+/** Desenho do amp na board (painel e aspeto fiéis ao modelo real). */
+export type AmpLayout = 'frontman-10g' | 'katana-mini' | 'thr5' | 'generic'
+
+export interface Amp {
+  id: string
+  modelName: string
+  brand: string
+  model: string
+  layout: AmpLayout
+  knobs: Knob[]
+  switches: PedalSwitch[]
+}
+
+/** Entrada da base de dados local de amps (como IdentifyPedalResponse para pedais). */
+export interface AmpData {
+  brand: string
+  model: string
+  layout: AmpLayout
+  knobs: Array<Omit<Knob, 'value'>>
+  switches: Array<{ name: string; default: boolean }>
+}
+
 // ─── Setup completo ──────────────────────────────────────────────────────────
 
 export interface PedalboardSetup {
@@ -71,6 +98,8 @@ export interface PedalboardSetup {
   name: string
   pedals: Pedal[]
   connections: Connection[]   // cadeia montada manualmente (guitarra→…→amp)
+  amps: Amp[]                  // amps que o utilizador tem (os 3 dele por defeito)
+  activeAmpId: string          // Amp ativo: onde a Cadeia termina
   song?: SetupSong             // música para a qual esta board está regulada
   createdAt: number
   updatedAt: number
@@ -103,6 +132,12 @@ export interface TunePedalsResponse {
     knobs: Record<string, number>
     switches?: Record<string, boolean>
   }>
+  // amp escolhido para a música (fica ativo) e a sua regulação
+  amp?: {
+    ampId: string
+    knobs: Record<string, number>
+    switches?: Record<string, boolean>
+  }
   notes: string
   missing: string[]
 }

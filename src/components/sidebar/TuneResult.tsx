@@ -1,5 +1,6 @@
 import { usePedalboardStore } from '../../store/usePedalboardStore'
 import { SketchButton } from '../ui/SketchButton'
+import { knobDisplay } from '../../utils/knobDisplay'
 
 export function TuneResult() {
   const { tuneResult, currentSetup, clearTuneResult } = usePedalboardStore()
@@ -70,6 +71,30 @@ export function TuneResult() {
           )
         })}
       </div>
+
+      {/* Amp escolhido */}
+      {response.amp && (() => {
+        const amp = currentSetup.amps.find((a) => a.id === response.amp!.ampId)
+        if (!amp) return null
+        return (
+          <div className="border border-ink rounded-[4px] p-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-body text-[13px] font-bold text-ink">{amp.model}</span>
+              <span className="font-mono text-[9px] tracking-wide px-1.5 py-px border rounded-[3px] border-ink text-ink">AMP</span>
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+              {amp.knobs.filter((k) => response.amp!.knobs[k.name] !== undefined).map((k) => (
+                <span key={k.name} className="font-body text-[11px] text-ink">
+                  {k.name}: <strong>{knobDisplay({ ...k, value: response.amp!.knobs[k.name] })}</strong>
+                </span>
+              ))}
+              {Object.entries(response.amp.switches ?? {}).map(([n, v]) => (
+                <span key={n} className="font-body text-[11px] text-gray-sketch">{n}: {v ? 'ON' : 'OFF'}</span>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Notes */}
       {response.notes && (

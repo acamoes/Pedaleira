@@ -14,11 +14,19 @@ Ligação entre a saída de uma tomada e a entrada de outra (guitarra, pedal ou 
 _Avoid_: ligação, patch
 
 **Cadeia**:
-A sequência ordenada de pedais pela qual o som passa, da guitarra ao amplificador, dada pelos cabos.
+A sequência ordenada de pedais pela qual o som passa, da guitarra ao Amp ativo, dada pelos cabos.
 _Avoid_: chain, sinal
 
+**Amplificador**:
+Um amplificador que o utilizador possui, com os controlos do painel real (knobs, switches, seletores e efeitos internos). Também se diz "amp".
+_Avoid_: coluna, combo, cabeça
+
+**Amp ativo**:
+O único Amplificador do Setup onde a Cadeia termina; os outros amps do Setup ficam guardados com as suas regulações.
+_Avoid_: amp ligado, saída
+
 **Setup**:
-A board completa com nome — todos os pedais (com ou sem cabo), as suas posições e regulações — que se guarda e carrega.
+A board completa com nome — todos os pedais (com ou sem cabo), os amps (e qual é o Amp ativo), posições e regulações — que se guarda e carrega.
 _Avoid_: configuração, preset, board (quando se fala do que se guarda)
 
 **Música**:
@@ -26,7 +34,7 @@ A música para a qual um Setup está regulado, escrita "Artista — Música". Pe
 _Avoid_: canção, tema, song
 
 **Ficha de regulação**:
-Folha imprimível da Cadeia ativa: cada pedal por ordem, com os knobs desenhados na posição atual, switches e seletores, para reproduzir o som na pedaleira real.
+Folha imprimível da Cadeia ativa: cada pedal por ordem e o Amp ativo no fim, com os knobs desenhados na posição atual, switches e seletores, para reproduzir o som na pedaleira real.
 _Avoid_: export, print, PNG
 
 **Onda do pedal**:

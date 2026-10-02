@@ -1,40 +1,46 @@
-import type { Pedal, TunePedalsResponse } from '../types'
+import type { Amp, Knob, Pedal, TunePedalsResponse } from '../types'
 
 // ─── A) Construir a pergunta (prompt) ────────────────────────────────────────
 
-// Knobs 0–10 aparecem só pelo nome; seletores e intervalos diferentes (ex.: ±18 dB) são explicitados
-function describeKnob(k: Pedal['knobs'][number]): string {
+// Knobs 0–10 aparecem só pelo nome; seletores, zonas e intervalos diferentes (ex.: ±18 dB) são explicitados
+function describeKnob(k: Knob): string {
+  if (k.zones?.length) return `${k.name} (Off, ou ${k.zones.join(' | ')} + intensidade 0-10, ex.: "${k.zones[0]} 6")`
   if (k.labels?.length) return `${k.name} (${k.labels.map((l, i) => `${k.min + i}=${l}`).join(', ')})`
   if (k.min !== 0 || k.max !== 10) return `${k.name} (${k.min} a ${k.max})`
   return k.name
 }
 
+function describeUnit(u: { brand: string; model: string; knobs: Knob[]; switches: Array<{ name: string }> }, extra = ''): string {
+  const knobs = u.knobs.map(describeKnob).join(', ') || 'sem knobs'
+  const sw = u.switches.length ? `; switches: ${u.switches.map((s) => s.name).join(', ')}` : ''
+  return `- ${[u.brand, u.model].filter(Boolean).join(' ')}${extra} — knobs: ${knobs}${sw}`
+}
+
 /**
  * Gera a pergunta a copiar para um LLM, no formato pedido pelo utilizador:
- * lista de pedais (com os knobs de cada um) + música + pedido de ordem e tabela.
+ * lista de pedais e de amps (com os controlos de cada um) + música + pedido de ordem e tabela.
  */
-export function buildTunePrompt(pedals: Pedal[], song: string, artist: string): string {
-  const list = pedals
-    .map((p) => {
-      const knobs = p.knobs.map(describeKnob).join(', ') || 'sem knobs'
-      const sw = p.switches.length ? `; switches: ${p.switches.map((s) => s.name).join(', ')}` : ''
-      return `- ${p.brand} ${p.model} (${p.type}) — knobs: ${knobs}${sw}`
-    })
-    .join('\n')
+export function buildTunePrompt(pedals: Pedal[], amps: Amp[], song: string, artist: string): string {
+  const list = pedals.map((p) => describeUnit(p, ` (${p.type})`)).join('\n') || '- (nenhum pedal)'
+  const ampList = amps.map((a) => describeUnit(a)).join('\n')
 
   const artistPart = artist.trim() ? ` dos/de "${artist.trim()}"` : ''
 
   return `Tenho em casa este INVENTÁRIO de pedais de guitarra:
 ${list}
 
+E estes AMPLIFICADORES (só uso um de cada vez):
+${ampList}
+
 Quero aproximar-me o mais possível do som da guitarra na música "${song.trim()}"${artistPart}.
 
-A partir do inventário acima (não posso adicionar outros pedais):
+A partir do inventário acima (não posso adicionar outros pedais nem amplificadores):
 1. ESCOLHE apenas os pedais RELEVANTES para esta música — ignora os que não fazem sentido (não tens de usar todos).
-2. Indica a ORDEM da cadeia com os escolhidos (ex.: Guitarra -> Pedal A -> Pedal B -> Amplificador).
-3. Dá a CONFIGURAÇÃO de cada pedal escolhido numa tabela, uma linha por pedal, com os valores de cada knob (0-10) na ordem em que os listei.
+2. ESCOLHE o AMPLIFICADOR mais adequado (só um), tendo em conta os seus canais e efeitos internos.
+3. Indica a ORDEM da cadeia com os escolhidos, a terminar no amplificador (ex.: Guitarra -> Pedal A -> Pedal B -> Amplificador X).
+4. Dá a CONFIGURAÇÃO de cada pedal escolhido e do amplificador numa tabela, uma linha por equipamento, com o valor de cada knob na ordem em que os listei (0-10, salvo indicação entre parênteses) e o estado de cada switch (on/off).
 
-Procura a combinação mais parecida possível com o tom original, mesmo que aproximada. Os pedais que não escolheres ficam de fora (em casa). Quero que me dês uma resposta seguindo exatamente este formato e mais nada: Pedal X1 - Configuração Y1, Pedal X2, Configuração Y2, etc...`
+Procura a combinação mais parecida possível com o tom original, mesmo que aproximada. Os pedais que não escolheres ficam de fora (em casa). Quero que me dês uma resposta seguindo exatamente este formato e mais nada: Pedal X1 - Configuração Y1, Pedal X2 - Configuração Y2, etc..., Amplificador - Configuração`
 }
 
 // ─── B) Interpretar a resposta colada ────────────────────────────────────────
@@ -42,7 +48,7 @@ Procura a combinação mais parecida possível com o tom original, mesmo que apr
 export interface ParsedTune {
   response: TunePedalsResponse
   orderedIds: string[]   // ordem dos pedais ATIVOS (esq → dir)
-  matchedCount: number
+  matchedCount: number   // pedais (e amp) encontrados
   unmatched: string[]    // pedais que não foram encontrados na resposta
 }
 
@@ -50,6 +56,7 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+const ARROWS = /(->|→|=>|>)/
 const TYPE_WORDS = /\b(overdrive|distortion|distor|fuzz|delay|reverb|chorus|flanger|phaser|tremolo|compressor|comp|octaver|octave|wah|eq|boost|looper|loop|tuner)\b/gi
 // Bypass do PEDAL (não confundir com valores de switches como "Voice off").
 // Só frases inequívocas a nível de pedal; "off"/"desligado" sozinhos são evitados
@@ -60,67 +67,104 @@ const BYPASS_RE = /(\bbypass\b|em\s+bypass|fora\s+da\s+(cadeia|chain)|n[aã]o\s+
 function pedalCandidates(p: Pedal): string[] {
   const core = p.model.replace(TYPE_WORDS, '').trim()        // ex.: "DS-1"
   const firstTwo = p.model.split(/\s+/).slice(0, 2).join(' ')
-  const out = [`${p.brand} ${p.model}`, p.modelName, p.model, core, firstTwo]
-    .map((s) => s.toLowerCase().trim())
-    .filter((s) => s.length >= 3)
+  return sortCandidates([`${p.brand} ${p.model}`, p.modelName, p.model, core, firstTwo])
+}
+
+/** Candidatos para um amp: tolera "Katana Mini"/"Katana-Mini", "THR 5"/"THR5", e a 1.ª palavra do modelo. */
+function ampCandidates(a: Amp): string[] {
+  const variants = (s: string) => [s, s.replace(/-/g, ' '), s.replace(/[-\s]+/g, ''), s.replace(/(\D)(\d)/g, '$1 $2')]
+  const first = a.model.split(/[\s-]+/)[0]
+  return sortCandidates([
+    ...variants(`${a.brand} ${a.model}`), ...variants(a.model), a.modelName,
+    first.length >= 4 ? first : '',
+  ])
+}
+
+function sortCandidates(list: string[]): string[] {
+  const out = list.map((s) => s.toLowerCase().trim()).filter((s) => s.length >= 3)
   // ordena por comprimento desc → tenta o match mais específico primeiro
   return Array.from(new Set(out)).sort((a, b) => b.length - a.length)
 }
 
-/** Índice (posição) e candidato com que um pedal aparece num texto (ou -1). */
-function matchIn(p: Pedal, lowerText: string): { idx: number; cand: string } {
-  let best = { idx: -1, cand: '' }
-  for (const cand of pedalCandidates(p)) {
+/** Índice (posição) com que um equipamento aparece num texto (ou -1). */
+function indexIn(cands: string[], lowerText: string): number {
+  let best = -1
+  for (const cand of cands) {
     const idx = lowerText.indexOf(cand)
-    if (idx !== -1 && (best.idx === -1 || idx < best.idx)) best = { idx, cand }
+    if (idx !== -1 && (best === -1 || idx < best)) best = idx
   }
   return best
 }
 
-/** Qual o pedal referido numa linha (o de match mais cedo)? */
-function pedalInLine(line: string, pedals: Pedal[]): Pedal | null {
+/** Qual o equipamento referido numa linha (o de match mais cedo)? */
+function firstIn<T>(line: string, items: T[], cands: (t: T) => string[]): { item: T; idx: number } | null {
   const lower = line.toLowerCase()
-  let best: { p: Pedal; idx: number } | null = null
-  for (const p of pedals) {
-    const { idx } = matchIn(p, lower)
-    if (idx !== -1 && (!best || idx < best.idx)) best = { p, idx }
+  let best: { item: T; idx: number } | null = null
+  for (const item of items) {
+    const idx = indexIn(cands(item), lower)
+    if (idx !== -1 && (!best || idx < best.idx)) best = { item, idx }
   }
-  return best?.p ?? null
+  return best
 }
 
 /** Ordem dos pedais: tenta linha com setas; senão, primeira ocorrência global. */
 function detectOrder(answer: string, pedals: Pedal[]): string[] {
-  const lines = answer.split('\n')
-  for (const line of lines) {
-    if (/(->|→|=>|>)/.test(line)) {
-      const lower = line.toLowerCase()
-      const seq = pedals
-        .map((p) => ({ p, idx: matchIn(p, lower).idx }))
-        .filter((x) => x.idx !== -1)
-        .sort((a, b) => a.idx - b.idx)
-      if (seq.length >= 2) return seq.map((x) => x.p.id)
+  const byPos = (text: string) => {
+    const lower = text.toLowerCase()
+    return pedals
+      .map((p) => ({ p, idx: indexIn(pedalCandidates(p), lower) }))
+      .filter((x) => x.idx !== -1)
+      .sort((a, b) => a.idx - b.idx)
+      .map((x) => x.p.id)
+  }
+  for (const line of answer.split('\n')) {
+    if (ARROWS.test(line)) {
+      const seq = byPos(line)
+      if (seq.length >= 2) return seq
     }
   }
-  // fallback: primeira ocorrência no texto inteiro
-  const lower = answer.toLowerCase()
-  return pedals
-    .map((p) => ({ p, idx: matchIn(p, lower).idx }))
-    .filter((x) => x.idx !== -1)
-    .sort((a, b) => a.idx - b.idx)
-    .map((x) => x.p.id)
+  return byPos(answer)   // fallback: primeira ocorrência no texto inteiro
 }
 
-/** Extrai os valores dos knobs de um pedal a partir de uma linha (tabela/lista). */
-function extractKnobs(line: string, pedal: Pedal): Record<string, number> {
+/** Valor de um knob escrito como texto: número, posição de seletor ("Crunch") ou zona ("Chorus 6", "Off"). */
+function parseKnobText(k: Knob, raw: string): number | null {
+  const t = raw.trim().toLowerCase()
+  if (k.zones?.length) {
+    if (/^(off|desligad|0\b)/.test(t)) return 0
+    for (const [i, z] of k.zones.entries()) {
+      const m = t.match(new RegExp('^' + escapeRegex(z.toLowerCase()) + '\\s*[:=]?\\s*(\\d+(?:[.,]\\d+)?)?'))
+      if (m) {
+        const amount = m[1] ? parseFloat(m[1].replace(',', '.')) : 5
+        return i * 10 + Math.max(0.1, Math.min(10, amount))
+      }
+    }
+  }
+  const li = (k.labels ?? []).findIndex((l) => t.startsWith(l.toLowerCase()))
+  if (li !== -1) return k.min + li
+  const n = parseFloat(t.replace(',', '.').replace('−', '-'))
+  return Number.isFinite(n) ? clamp(n, k.min, k.max) : null
+}
+
+/** Extrai os valores dos knobs de um equipamento a partir de uma linha (tabela/lista). */
+function extractKnobs(line: string, knobs: Knob[], candidates: string[]): Record<string, number> {
   const found: Record<string, number> = {}
 
-  // 1) por nome: "Drive: 7", "Tone 6", "| Level | 5 |", "Dist = 7", "100 Hz: -3", "Mode: Poly"
+  // 1) por nome: "Drive: 7", "Tone 6", "| Level | 5 |", "Dist = 7", "100 Hz: -3", "Mode: Poly", "Effect: Chorus 6"
   //    Nomes mais longos primeiro e o trecho casado é apagado, para "Sub" não apanhar "Sub 2".
   let rest = line
-  for (const k of [...pedal.knobs].sort((a, b) => b.name.length - a.name.length)) {
+  for (const k of [...knobs].sort((a, b) => b.name.length - a.name.length)) {
+    // knob de zonas: "Effect: Chorus 6" / "Delay/Reverb = Off"
+    if (k.zones?.length) {
+      const names = ['off', 'desligad\\w*', '0(?![.,\\d])', ...k.zones.map((z) => escapeRegex(z.toLowerCase()))].join('|')
+      const zm = rest.match(new RegExp(escapeRegex(k.name) + '\\s*[:=|-]?\\s*((?:' + names + ')\\s*[:=]?\\s*(?:\\d+(?:[.,]\\d+)?)?)', 'i'))
+      if (zm) {
+        const v = parseKnobText(k, zm[1])
+        if (v !== null) { found[k.name] = v; rest = rest.replace(zm[0], ' '); continue }
+      }
+    }
     const re = new RegExp(escapeRegex(k.name) + '\\s*[^0-9\\n+\\-−]{0,6}?([+\\-−]?\\d+(?:[.,]\\d+)?)', 'i')
     const m = rest.match(re)
-    if (m) {
+    if (m && !k.zones?.length) {
       found[k.name] = clamp(parseFloat(m[1].replace(',', '.').replace('−', '-')), k.min, k.max)
       rest = rest.replace(m[0], ' ')
       continue
@@ -137,31 +181,55 @@ function extractKnobs(line: string, pedal: Pedal): Record<string, number> {
   }
   if (Object.keys(found).length > 0) return found
 
-  // 2) fallback posicional: remove o nome do pedal e mapeia os números restantes
+  // 2) fallback posicional: remove o nome do equipamento e mapeia os números restantes
   //    pela ordem dos knobs (a mesma ordem em que foram listados na pergunta).
   let stripped = line
-  for (const cand of pedalCandidates(pedal)) {
+  for (const cand of candidates) {
     stripped = stripped.replace(new RegExp(escapeRegex(cand), 'ig'), ' ')
   }
   const nums = (stripped.match(/(?<![\w.])[+\-−]?\d+(?:[.,]\d+)?(?![\w])/g) ?? []).map((n) =>
     parseFloat(n.replace(',', '.').replace('−', '-')),
   )
-  if (nums.length >= pedal.knobs.length && pedal.knobs.length > 0) {
-    pedal.knobs.forEach((k, i) => { found[k.name] = clamp(nums[i], k.min, k.max) })
+  if (nums.length >= knobs.length && knobs.length > 0 && !knobs.some((k) => k.zones?.length)) {
+    knobs.forEach((k, i) => { found[k.name] = clamp(nums[i], k.min, k.max) })
   }
   return found
+}
+
+/** Switches numa linha: "NomeSwitch: on/off/ligado/ativado". */
+function extractSwitches(line: string, switches: Array<{ name: string }>): Record<string, boolean> {
+  const out: Record<string, boolean> = {}
+  for (const sw of switches) {
+    const re = new RegExp(escapeRegex(sw.name) + '\\s*[:=]?\\s*(on|off|lig\\w*|deslig\\w*|ativ\\w*|sim|n[aã]o|true|false)', 'i')
+    const m = line.match(re)
+    if (m) out[sw.name] = /on|lig|ativ|sim|true/i.test(m[1]) && !/deslig/i.test(m[1])
+  }
+  return out
 }
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v))
 }
 
+type JsonUnit = { pedalId?: string; ampId?: string; model?: string; enabled?: boolean; knobs?: Record<string, number | string>; switches?: Record<string, boolean> }
+
+/** Valores de knobs vindos de JSON (aceita números e texto como "Crunch"/"Chorus 6"). */
+function jsonKnobs(knobs: Knob[], raw: JsonUnit['knobs']): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const k of knobs) {
+    const v = raw?.[k.name]
+    const n = typeof v === 'number' ? clamp(v, k.min, k.max) : typeof v === 'string' ? parseKnobText(k, v) : null
+    if (n !== null) out[k.name] = n
+  }
+  return out
+}
+
 /** Tenta interpretar a resposta como JSON (formato TunePedalsResponse). */
-function tryParseJson(answer: string, pedals: Pedal[]): ParsedTune | null {
+function tryParseJson(answer: string, pedals: Pedal[], amps: Amp[]): ParsedTune | null {
   const start = answer.indexOf('{')
   const end = answer.lastIndexOf('}')
   if (start === -1 || end <= start) return null
-  let data: { settings?: Array<{ pedalId?: string; model?: string; enabled?: boolean; knobs?: Record<string, number>; switches?: Record<string, boolean> }>; notes?: string } | null = null
+  let data: { settings?: JsonUnit[]; amp?: JsonUnit; notes?: string } | null = null
   try {
     data = JSON.parse(answer.slice(start, end + 1))
   } catch {
@@ -178,16 +246,18 @@ function tryParseJson(answer: string, pedals: Pedal[]): ParsedTune | null {
     let pedal: Pedal | undefined = st.pedalId ? byId.get(st.pedalId) : undefined
     if (!pedal && st.model) pedal = pedals.find((p) => p.model.toLowerCase().includes(String(st.model).toLowerCase()))
     if (!pedal) continue
-    const knobs: Record<string, number> = {}
-    for (const k of pedal.knobs) {
-      const v = st.knobs?.[k.name]
-      if (typeof v === 'number') knobs[k.name] = Math.max(k.min, Math.min(k.max, v))
-    }
     const enabled = st.enabled !== false
-    settings.push({ pedalId: pedal.id, enabled, knobs, switches: st.switches })
+    settings.push({ pedalId: pedal.id, enabled, knobs: jsonKnobs(pedal.knobs, st.knobs), switches: st.switches })
     if (enabled) orderedIds.push(pedal.id)
   }
-  if (settings.length === 0) return null
+
+  let amp: TunePedalsResponse['amp']
+  if (data.amp) {
+    const a = amps.find((x) => x.id === data!.amp!.ampId)
+      ?? (data.amp.model ? firstIn(String(data.amp.model), amps, ampCandidates)?.item : undefined)
+    if (a) amp = { ampId: a.id, knobs: jsonKnobs(a.knobs, data.amp.knobs), switches: data.amp.switches }
+  }
+  if (settings.length === 0 && !amp) return null
 
   // pedais não referidos → desligados
   for (const p of pedals) {
@@ -195,9 +265,9 @@ function tryParseJson(answer: string, pedals: Pedal[]): ParsedTune | null {
   }
 
   return {
-    response: { song: '', artist: '', settings, notes: data.notes ?? 'Aplicado a partir de JSON.', missing: [] },
+    response: { song: '', artist: '', settings, amp, notes: data.notes ?? 'Aplicado a partir de JSON.', missing: [] },
     orderedIds,
-    matchedCount: orderedIds.length,
+    matchedCount: orderedIds.length + (amp ? 1 : 0),
     unmatched: pedals.filter((p) => !orderedIds.includes(p.id) && !settings.find((s) => s.pedalId === p.id && Object.keys(s.knobs).length)).map((p) => p.model),
   }
 }
@@ -205,39 +275,57 @@ function tryParseJson(answer: string, pedals: Pedal[]): ParsedTune | null {
 export function parseTuneAnswer(
   answer: string,
   pedals: Pedal[],
+  amps: Amp[],
   song: string,
   artist: string,
 ): ParsedTune {
   // Se a resposta for JSON, usa o caminho estruturado (mais fiável)
-  const asJson = tryParseJson(answer, pedals)
+  const asJson = tryParseJson(answer, pedals, amps)
   if (asJson) {
     asJson.response.song = song.trim()
     asJson.response.artist = artist.trim()
     return asJson
   }
 
+  const lines = answer.split('\n')
   const knobsByPedal = new Map<string, Record<string, number>>()
   const switchesByPedal = new Map<string, Record<string, boolean>>()
   const bypassByPedal = new Set<string>()
 
-  // Processa linha a linha (uma linha de tabela = um pedal)
-  for (const line of answer.split('\n')) {
-    const pedal = pedalInLine(line, pedals)
-    if (!pedal) continue
+  // Amp escolhido: o que fecha a linha da ordem; senão, o primeiro com regulação
+  let chosenAmp: Amp | null = null
+  for (const line of lines) {
+    if (!ARROWS.test(line)) continue
+    const a = firstIn(line, amps, ampCandidates)
+    if (a) { chosenAmp = a.item; break }
+  }
+  let ampKnobs: Record<string, number> = {}
+  let ampSwitches: Record<string, boolean> = {}
+
+  // Processa linha a linha (uma linha de tabela = um equipamento)
+  for (const line of lines) {
+    const p = firstIn(line, pedals, pedalCandidates)
+    const a = ARROWS.test(line) ? null : firstIn(line, amps, ampCandidates)
+
+    // linha do amp (o amp aparece antes de qualquer pedal na linha)
+    if (a && (!p || a.idx < p.idx)) {
+      if (!chosenAmp) chosenAmp = a.item
+      if (a.item.id === chosenAmp.id) {
+        ampKnobs = { ...ampKnobs, ...extractKnobs(line, a.item.knobs, ampCandidates(a.item)) }
+        ampSwitches = { ...ampSwitches, ...extractSwitches(line, a.item.switches) }
+      }
+      continue
+    }
+
+    if (!p) continue
+    const pedal = p.item
     if (BYPASS_RE.test(line)) bypassByPedal.add(pedal.id)
-    const knobs = extractKnobs(line, pedal)
+    const knobs = extractKnobs(line, pedal.knobs, pedalCandidates(pedal))
     if (Object.keys(knobs).length > 0) {
       knobsByPedal.set(pedal.id, { ...knobsByPedal.get(pedal.id), ...knobs })
     }
-    // switches: procura "NomeSwitch: on/off/ligado/ativado"
-    for (const sw of pedal.switches) {
-      const re = new RegExp(escapeRegex(sw.name) + '\\s*[:=]?\\s*(on|off|lig\\w*|deslig\\w*|ativ\\w*|sim|n[aã]o|true|false)', 'i')
-      const m = line.match(re)
-      if (m) {
-        const v = /on|lig|ativ|sim|true/i.test(m[1]) && !/deslig/i.test(m[1])
-        switchesByPedal.set(pedal.id, { ...switchesByPedal.get(pedal.id), [sw.name]: v })
-      }
-    }
+    const sws = extractSwitches(line, pedal.switches)
+    if (Object.keys(sws).length) switchesByPedal.set(pedal.id, { ...switchesByPedal.get(pedal.id), ...sws })
   }
 
   // Ordem dos pedais ativos (remove os que estão em bypass)
@@ -263,9 +351,10 @@ export function parseTuneAnswer(
     song: song.trim(),
     artist: artist.trim(),
     settings,
+    amp: chosenAmp ? { ampId: chosenAmp.id, knobs: ampKnobs, switches: ampSwitches } : undefined,
     notes: `${orderedIds.length} de ${pedals.length} pedais ligados e configurados a partir da resposta.`,
     missing: [],
   }
 
-  return { response, orderedIds, matchedCount: matchedIds.size, unmatched }
+  return { response, orderedIds, matchedCount: matchedIds.size + (chosenAmp ? 1 : 0), unmatched }
 }

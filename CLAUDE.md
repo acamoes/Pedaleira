@@ -59,13 +59,27 @@ cable via Pointer Events; drop onto another jack calls `connectJacks`; clicking 
 `x` only cosmetically. `withMigratedConnections` (run in `hydrateSetup` on load/import) rebuilds
 cables from the legacy `enabled`+`x` model for setups saved before this feature.
 
+### Amplifiers ("Amplificador" / "Amp ativo")
+`PedalboardSetup.amps` is the user's amp inventory (seeded with their Fender Frontman 10G, Boss
+Katana-Mini and Yamaha THR5 via `constants/seedAmps.ts`; `hydrateSetup` backfills them into older
+setups) and `activeAmpId` is the one the chain ends in — the `'amp'` jack always means the active
+amp (`activeAmpOf`). Amps have knobs/switches like pedals but no `EffectType` and no wave.
+`components/board/amp/AmpCard.tsx` draws each `AmpLayout` faithfully to the real panel (control
+order, colours) and exports `AMP_DIMS` — `Pedalboard.tsx` derives the amp jack from `w`/`jackY`,
+so changing a layout's panel height means updating `jackY`. Unknown models become a `generic` amp.
+Knob extras used by amps: `labels` (selectors, e.g. Katana AMP TYPE) and `zones` (THR5 Effect and
+Delay/Reverb: one knob, 10 units per zone, 0 = off); always format values with
+`utils/knobDisplay.ts`. The tune prompt lists the amps and asks the LLM to pick one;
+`parseTuneAnswer` fills `response.amp`, which `applyParsedTune` makes active.
+
 ### Pedal wave ("Onda do pedal") — keyed off `EffectType`
-`src/utils/signal.ts` is pure-math DSP for **visualization only** (`applyEffect`, `effectAmount`),
-rendered per pedal by `WaveformViz` inside `PedalCard`. Each card shows its pedal **in isolation**
+`src/utils/signal.ts` is pure-math DSP for **visualization only** (`pedalWave` picks a view per
+type — waveform close-up, note over time, or frequency response — driven by knobs and Type/Mode
+selectors), rendered per pedal by `WaveformViz` inside `PedalCard`. Each card shows its pedal **in isolation**
 (clean input → that pedal), never the accumulated chain.
 
 **Adding a new `EffectType` is cross-cutting**: update the union in `src/types/index.ts`, then
-`signal.ts` (`applyEffect`), `PedalCard` `TYPE_LABELS`, `WaveformViz` `TYPE_DESC`,
+`signal.ts` (`pedalWave`), `PedalCard` `TYPE_LABELS`, `WaveformViz` `TYPE_DESC`,
 `constants/knobInfo.ts`, and `utils/chainWarnings.ts` ordering.
 
 ### Pedal identification (no AI)
@@ -86,8 +100,8 @@ and detects bypass. It returns a `TunePedalsResponse` + ordered ids consumed by
 Hand-drawn black/white "sketch" look. Theming uses CSS custom properties in `src/index.css`
 (`--color-ink`, `--color-paper`, ...); `tailwind.config.ts` colors reference those vars and dark
 mode swaps them via the `.dark` class on `<html>` (toggled in `App.tsx` from store `theme`).
-SVG illustrations (`GuitarJack`, `Amplifier`, `PedalCard`) use `currentColor` +
-`var(--color-*)` so they theme automatically — avoid hardcoded hex in SVGs. The guitar/amp jack
-positions in `Pedalboard.tsx` are tuned to the SVG viewBox coordinates; changing the SVG means
-re-checking those offsets. When editing complex SVG illustrations, render to PNG and look at the
+SVG illustrations (`GuitarJack`, `PedalCard`) use `currentColor` +
+`var(--color-*)` so they theme automatically — avoid hardcoded hex in SVGs (exceptions: pedal body
+colours and the amp layouts, which copy real hardware colours). The guitar jack position in
+`Pedalboard.tsx` is tuned to the SVG viewBox coordinates; changing the SVG means re-checking it. When editing complex SVG illustrations, render to PNG and look at the
 result rather than guessing bezier coordinates.

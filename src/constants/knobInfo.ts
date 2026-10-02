@@ -1,6 +1,12 @@
 // Descrições curtas por nome de knob (tooltip). Procura por correspondência
 // parcial em lowercase para cobrir variações (Drive, Overdrive, Gain...).
 const KNOB_INFO: Array<[RegExp, string]> = [
+  // controlos de amplificador (antes dos genéricos: "Delay/Reverb" não é um tempo de delay)
+  [/^amp( type)?$/, 'canal / modelo de amplificador'],
+  [/master/, 'volume do pré-amp: mais = mais compressão e saturação'],
+  [/^effect$/, 'efeito interno: zona escolhe o tipo, posição a intensidade'],
+  [/delay\/reverb/, 'delay/reverb interno: zona escolhe o tipo, posição a quantidade'],
+  [/^middle$|^mid$/, 'quantidade de médios'],
   [/drive|gain|overdrive|dist/, 'quantidade de saturação/distorção'],
   [/tone|treble|filter/, 'brilho — agudos vs. corpo'],
   [/bass/, 'quantidade de graves'],
