@@ -77,8 +77,8 @@ Delay/Reverb: one knob, 10 units per zone, 0 = off); always format values with
 `components/print/SettingsSheet.tsx` renders a hidden, print-only A4-landscape sheet in a
 technical-datasheet style (title block grid, numbered sections, uniform 4-column card grid, ruled
 notes). It paginates itself — card/row heights are *estimated in mm* so every page repeats the
-title block with "Folha n / N" — so those constants must stay in sync with the `@media print`
-rules in `index.css`. Verify changes by printing to PDF (headless Chrome `--print-to-pdf`).
+title block, and notes only use the space left on the last page (they never open a new page) —
+so those constants must stay in sync with the `@media print` rules in `index.css`. Verify changes by printing to PDF (headless Chrome `--print-to-pdf`).
 
 ### Pedal wave ("Onda do pedal") — keyed off `EffectType`
 `src/utils/signal.ts` is pure-math DSP for **visualization only** (`pedalWave` picks a view per

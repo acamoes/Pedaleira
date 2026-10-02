@@ -96,12 +96,12 @@
 
   /* Bloco de título em grelha */
   .sheet-title-block {
-    display: grid; grid-template-columns: 1fr 58mm 30mm 22mm;
+    display: grid; grid-template-columns: 1fr 58mm 30mm;
     border: 1.2pt solid #000; margin-bottom: 4mm;
   }
   .sheet-cell { display: flex; flex-direction: column; justify-content: center; gap: .6mm; padding: 1.2mm 2mm; min-height: 9mm; }
   .sheet-cell:not(.sheet-cell-title) { border-left: .5pt solid #000; }
-  .sheet-cell:nth-child(2), .sheet-cell:nth-child(3), .sheet-cell:nth-child(4) { border-bottom: .5pt solid #000; }
+  .sheet-cell:nth-child(2), .sheet-cell:nth-child(3) { border-bottom: .5pt solid #000; }
   .sheet-cell-title { grid-row: span 2; justify-content: space-between; }
   .sheet-cell-label { font-size: 5.5pt; text-transform: uppercase; letter-spacing: .12em; }
   .sheet-cell-value { font-size: 9pt; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

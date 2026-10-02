@@ -12,7 +12,8 @@ import { TYPE_LABELS } from '../../constants/typeLabels'
 // ecrã; o CSS de impressão (index.css) mostra só esta folha.
 //
 // A paginação é calculada aqui (alturas estimadas em mm) para que cada folha repita
-// o bloco de título e diga "Folha n / N" — o browser sozinho não sabe fazer isso.
+// o bloco de título — o browser sozinho não sabe fazer isso. As notas nunca abrem
+// uma folha nova: entram só no espaço que sobra na última.
 
 interface Props {
   chain: Pedal[]
@@ -22,7 +23,6 @@ interface Props {
   tune: TuneResult | null
 }
 
-const GUITAR_NAME = 'Fender Stratocaster'
 const pad2 = (n: number) => String(n).padStart(2, '0')
 
 /** Um cartão da folha: um pedal da cadeia ou o amp. */
@@ -149,7 +149,8 @@ const LINE_W = 277          // largura útil (297 − 2×10)
 const GRID_COLS = 4
 const GRID_GAP = 3
 const CONTROLS_PER_ROW = 4
-const NOTES_BASE_H = 40     // cabeçalho + 4 linhas para escrever à mão
+const NOTE_LINE_H = 7      // cada linha em branco para escrever à mão
+const MAX_NOTE_LINES = 4
 
 function controlHeight(k: Knob): number {
   const kind = controlKind(k)
@@ -166,7 +167,8 @@ function cardHeight(u: SheetUnit): number {
   return h
 }
 
-interface SheetPage { units: SheetUnit[]; chain: boolean; notes: boolean }
+// notes: null = sem secção de notas nesta folha; senão, quantas linhas em branco cabem
+interface SheetPage { units: SheetUnit[]; chain: boolean; notes: { lines: number } | null }
 
 /** Linhas que o diagrama da cadeia ocupa (caixas com seta, largura pela quantidade de texto). */
 function flowLines(units: SheetUnit[]): number {
@@ -179,9 +181,9 @@ function flowLines(units: SheetUnit[]): number {
   return lines
 }
 
-function paginate(units: SheetUnit[], notesH: number): SheetPage[] {
+function paginate(units: SheetUnit[], notesTextH: number): SheetPage[] {
   const chainH = SECTION_H + flowLines(units) * CHAIN_LINE_H + 4
-  const pages: SheetPage[] = [{ units: [], chain: true, notes: false }]
+  const pages: SheetPage[] = [{ units: [], chain: true, notes: null }]
   let free = PAGE_H - TITLE_H - chainH - SECTION_H
 
   for (let i = 0; i < units.length; i += GRID_COLS) {
@@ -189,15 +191,18 @@ function paginate(units: SheetUnit[], notesH: number): SheetPage[] {
     const rowH = Math.max(...row.map(cardHeight)) + GRID_GAP
     const page = pages[pages.length - 1]
     if (rowH > free && page.units.length > 0) {
-      pages.push({ units: [], chain: false, notes: false })
+      pages.push({ units: [], chain: false, notes: null })
       free = PAGE_H - TITLE_H - SECTION_H
     }
     pages[pages.length - 1].units.push(...row)
     free -= rowH
   }
 
-  if (notesH > free) pages.push({ units: [], chain: false, notes: true })
-  else pages[pages.length - 1].notes = true
+  // Notas no espaço que sobra da última folha (sem abrir outra): o texto do LLM, se
+  // couber, e tantas linhas em branco quantas couberem (até 4).
+  const room = free - SECTION_H - notesTextH
+  const lines = Math.max(0, Math.min(MAX_NOTE_LINES, Math.floor(room / NOTE_LINE_H)))
+  if (room >= 0 && (notesTextH > 0 || lines > 0)) pages[pages.length - 1].notes = { lines }
   return pages
 }
 
@@ -216,8 +221,8 @@ export function SettingsSheet({ chain, amp, setupName, song, tune }: Props) {
     units.push({ key: amp.id, badge: 'AMP', tag: '', brand: amp.brand, model: amp.model, knobs: amp.knobs, switches: amp.switches })
   }
 
-  const notesH = NOTES_BASE_H + Math.ceil(notes.length / 180) * 4.5
-  const pages = paginate(units, notesH)
+  const notesTextH = notes ? Math.ceil(notes.length / 180) * 4.5 + 1 : 0
+  const pages = paginate(units, notesTextH)
   const ampName = amp ? [amp.brand, amp.model].filter(Boolean).join(' ') : '—'
 
   return createPortal(
@@ -232,8 +237,6 @@ export function SettingsSheet({ chain, amp, setupName, song, tune }: Props) {
             </div>
             <Cell label="Setup" value={setupName} />
             <Cell label="Data" value={date} />
-            <Cell label="Folha" value={`${pi + 1} / ${pages.length}`} />
-            <Cell label="Guitarra" value={GUITAR_NAME} />
             <Cell label="Amp" value={ampName} />
             <Cell label="Pedais" value={String(chain.length)} />
           </div>
@@ -275,7 +278,7 @@ export function SettingsSheet({ chain, amp, setupName, song, tune }: Props) {
               <SectionHead n="03" label="Notas" />
               {notes && <p className="sheet-notes-text">{notes}</p>}
               <div className="sheet-notes-lines">
-                {[0, 1, 2, 3].map((i) => <span key={i} />)}
+                {Array.from({ length: page.notes.lines }, (_, i) => <span key={i} />)}
               </div>
             </>
           )}
