@@ -71,8 +71,15 @@ export interface PedalboardSetup {
   name: string
   pedals: Pedal[]
   connections: Connection[]   // cadeia montada manualmente (guitarra→…→amp)
+  song?: SetupSong             // música para a qual esta board está regulada
   createdAt: number
   updatedAt: number
+}
+
+/** A Música de um Setup (mostrada como "Artista — Música"). */
+export interface SetupSong {
+  artist: string
+  title: string
 }
 
 // ─── Respostas JSON da IA ────────────────────────────────────────────────────

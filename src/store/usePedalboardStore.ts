@@ -4,6 +4,7 @@ import type {
   Knob,
   Pedal,
   PedalboardSetup,
+  SetupSong,
   Connection,
   TuneResult,
   IdentifyPedalResponse,
@@ -149,6 +150,7 @@ interface Store {
   clearHistory: () => void
 
   renameCurrentSetup: (name: string) => void
+  setSong: (song: SetupSong | null) => void
   saveCurrentAsSetup: () => void
   loadSetup: (setupId: string) => void
   deleteSetup: (setupId: string) => void
@@ -359,6 +361,14 @@ export const usePedalboardStore = create<Store>((set, get) => {
       persist()
     },
 
+    setSong(song) {
+      const clean = song && (song.artist.trim() || song.title.trim())
+        ? { artist: song.artist.trim(), title: song.title.trim() }
+        : undefined
+      set((s) => ({ currentSetup: { ...s.currentSetup, song: clean, updatedAt: Date.now() } }))
+      persist()
+    },
+
     saveCurrentAsSetup() {
       const { currentSetup, savedSetups } = get()
       const existing = savedSetups.findIndex((s) => s.id === currentSetup.id)
@@ -436,6 +446,10 @@ export const usePedalboardStore = create<Store>((set, get) => {
             ...s.currentSetup,
             pedals: syncEnabledPedals(updatedPedals, connections),
             connections,
+            // a afinação aplicada define a Música da board (se a resposta a trouxer)
+            song: response.song?.trim()
+              ? { artist: response.artist?.trim() ?? '', title: response.song.trim() }
+              : s.currentSetup.song,
             updatedAt: Date.now(),
           },
           tuneResult: { response, appliedAt: Date.now() },

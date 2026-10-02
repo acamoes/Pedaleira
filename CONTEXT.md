@@ -21,6 +21,10 @@ _Avoid_: chain, sinal
 A board completa com nome — todos os pedais (com ou sem cabo), as suas posições e regulações — que se guarda e carrega.
 _Avoid_: configuração, preset, board (quando se fala do que se guarda)
 
+**Música**:
+A música para a qual um Setup está regulado, escrita "Artista — Música". Pertence ao Setup; é definida ao aplicar uma afinação ou à mão, e mantém-se mesmo que se ajustem knobs depois.
+_Avoid_: canção, tema, song
+
 **Ficha de regulação**:
 Folha imprimível da Cadeia ativa: cada pedal por ordem, com os knobs desenhados na posição atual, switches e seletores, para reproduzir o som na pedaleira real.
 _Avoid_: export, print, PNG

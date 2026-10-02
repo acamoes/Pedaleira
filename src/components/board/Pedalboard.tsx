@@ -9,6 +9,7 @@ import { Amplifier } from './Amplifier'
 import { CableConnections } from './CableConnections'
 import { SketchButton } from '../ui/SketchButton'
 import { SettingsSheet } from '../print/SettingsSheet'
+import { SongTitle } from './SongTitle'
 import { deriveChain, GUITAR_JACK, AMP_JACK, inJackId, outJackId } from '../../utils/chain'
 
 const SNAP = 10  // grelha de snap ao largar (px)
@@ -114,6 +115,9 @@ export function Pedalboard() {
 
   return (
     <div className="flex flex-col gap-3 flex-1 overflow-hidden">
+      {/* Música do Setup — o "título" da board */}
+      <SongTitle />
+
       {/* ══ A BOARD — peça única: barra de topo + canvas ══ */}
       <div className="flex flex-col flex-1 border-2 border-ink rounded-[6px] shadow-sketch bg-paper-dark overflow-hidden">
 
@@ -246,7 +250,7 @@ export function Pedalboard() {
         </div>
       </div>
 
-      <SettingsSheet chain={chainPedals} setupName={currentSetup.name} tune={tuneResult} />
+      <SettingsSheet chain={chainPedals} setupName={currentSetup.name} song={currentSetup.song} tune={tuneResult} />
 
       {showAddModal && <AddPedalModal onClose={() => setShowAddModal(false)} />}
       {editingPedal && (

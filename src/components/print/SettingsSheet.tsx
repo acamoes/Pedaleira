@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
-import type { Knob, Pedal, PedalSwitch, TuneResult } from '../../types'
+import type { Knob, Pedal, PedalSwitch, SetupSong, TuneResult } from '../../types'
 import { bandFreq } from '../../utils/signal'
+import { formatSong } from '../board/SongTitle'
 
 // ─── Ficha de regulação ──────────────────────────────────────────────────────
 // Folha imprimível (A4 horizontal, preto e branco) da Cadeia ativa: cada pedal por
@@ -10,6 +11,7 @@ import { bandFreq } from '../../utils/signal'
 interface Props {
   chain: Pedal[]
   setupName: string
+  song?: SetupSong
   tune: TuneResult | null
 }
 
@@ -112,18 +114,17 @@ function PedalSheet({ pedal, index }: { pedal: Pedal; index: number }) {
   )
 }
 
-export function SettingsSheet({ chain, setupName, tune }: Props) {
+export function SettingsSheet({ chain, setupName, song, tune }: Props) {
   const date = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })
-  const song = tune?.response.song?.trim()
-  const artist = tune?.response.artist?.trim()
   const notes = tune?.response.notes?.trim()
 
   return createPortal(
     <div className="settings-sheet" aria-hidden="true">
       <header className="sheet-header">
+        {/* Com Música, ela é o título; o Setup e a data passam a subtítulo */}
         <div>
-          <h1>Pedaleira — {setupName}</h1>
-          {song && <p className="sheet-based">baseado em: {song}{artist ? ` — ${artist}` : ''}</p>}
+          <h1>{song ? formatSong(song) : `Pedaleira — ${setupName}`}</h1>
+          {song && <p className="sheet-subtitle">{setupName}</p>}
         </div>
         <span className="sheet-date">{date}</span>
       </header>
