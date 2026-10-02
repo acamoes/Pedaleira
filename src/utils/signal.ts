@@ -334,7 +334,7 @@ function bell(f: number, f0: number, gainDb: number, octaves: number): number {
 }
 
 // "100 Hz", "1.6 kHz" → Hz
-function bandFreq(name: string): number | null {
+export function bandFreq(name: string): number | null {
   const m = name.match(/^([\d.]+)\s*(k?)hz$/i)
   return m ? parseFloat(m[1]) * (m[2] ? 1000 : 1) : null
 }

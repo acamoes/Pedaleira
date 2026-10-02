@@ -8,7 +8,7 @@ import { GuitarJack } from './GuitarJack'
 import { Amplifier } from './Amplifier'
 import { CableConnections } from './CableConnections'
 import { SketchButton } from '../ui/SketchButton'
-import { exportChainPng } from '../../utils/exportImage'
+import { SettingsSheet } from '../print/SettingsSheet'
 import { deriveChain, GUITAR_JACK, AMP_JACK, inJackId, outJackId } from '../../utils/chain'
 
 const SNAP = 10  // grelha de snap ao largar (px)
@@ -25,7 +25,7 @@ interface Pt { x: number; y: number }
 interface JackDef { id: string; x: number; y: number; kind: 'in' | 'out' }
 
 export function Pedalboard() {
-  const { currentSetup, movePedal, connectJacks, disconnectCable, clearConnections } = usePedalboardStore()
+  const { currentSetup, tuneResult, movePedal, connectJacks, disconnectCable, clearConnections } = usePedalboardStore()
   const [showAddModal,  setShowAddModal]  = useState(false)
   const [editingPedal,  setEditingPedal]  = useState<Pedal | null>(null)
   const [draggingId,    setDraggingId]    = useState<string | null>(null)
@@ -140,10 +140,11 @@ export function Pedalboard() {
               Limpar cabos
             </button>
             <button type="button" disabled={chainPedals.length === 0}
-              onClick={() => exportChainPng(chainPedals, currentSetup.name)}
+              onClick={() => window.print()}
+              title="Imprimir (ou guardar em PDF) a ficha de regulação da cadeia ativa"
               className="font-body text-[12px] text-gray-sketch border-[1.5px] border-gray-light rounded-hand
                 px-2.5 py-1 hover:text-ink hover:border-ink transition-colors disabled:opacity-40">
-              Exportar PNG
+              Imprimir
             </button>
           </div>
         </div>
@@ -244,6 +245,8 @@ export function Pedalboard() {
           })}
         </div>
       </div>
+
+      <SettingsSheet chain={chainPedals} setupName={currentSetup.name} tune={tuneResult} />
 
       {showAddModal && <AddPedalModal onClose={() => setShowAddModal(false)} />}
       {editingPedal && (

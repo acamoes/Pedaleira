@@ -47,7 +47,7 @@ input jack** (enforced in `connectJacks`).
 `src/utils/chain.ts` is the single source of truth: **`deriveChain(pedals, connections)`** walks
 from `'guitar'` following out→in links (with a visited-set guard) until `'amp'` or a dead end,
 returning the ordered pedals — the chain order is the *wiring* order. Everything that needs the
-chain calls `deriveChain` (`Pedalboard.tsx`, `Sidebar.tsx`, PNG export).
+chain calls `deriveChain` (`Pedalboard.tsx`, `Sidebar.tsx`, the printable settings sheet `print/SettingsSheet.tsx`).
 `connectedIds` derives the "in chain" set. New pedals start with no cables (disconnected).
 `Pedal.enabled` is retained but is now just a **mirror of "is in the derived chain"**, kept in
 sync by `syncEnabledPedals` after every connection mutation (source of truth = `connections`).

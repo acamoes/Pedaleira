@@ -17,6 +17,14 @@ _Avoid_: ligação, patch
 A sequência ordenada de pedais pela qual o som passa, da guitarra ao amplificador, dada pelos cabos.
 _Avoid_: chain, sinal
 
+**Setup**:
+A board completa com nome — todos os pedais (com ou sem cabo), as suas posições e regulações — que se guarda e carrega.
+_Avoid_: configuração, preset, board (quando se fala do que se guarda)
+
+**Ficha de regulação**:
+Folha imprimível da Cadeia ativa: cada pedal por ordem, com os knobs desenhados na posição atual, switches e seletores, para reproduzir o som na pedaleira real.
+_Avoid_: export, print, PNG
+
 **Onda do pedal**:
 Imagem, no cartão de cada pedal, do que esse pedal faz isoladamente a uma nota limpa de
 guitarra, conforme os seus knobs e seletores atuais. A vista depende do tipo de efeito
